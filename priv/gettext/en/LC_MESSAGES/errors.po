@@ -1,0 +1,188 @@
+## `msgid`s in this file come from POT (.pot) files.
+##
+## Do not add, change, or remove `msgid`s manually here as
+## they're tied to the ones in the corresponding POT file
+## (with the same domain).
+##
+## Use `mix gettext.extract --merge` or `mix gettext.merge`
+## to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: en\n"
+"Plural-Forms: nplurals=2\n"
+
+#, elixir-format
+#: lib/core/error.ex:21
+msgid "account"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:22
+msgid "accounts"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:23
+msgid "group"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:24
+msgid "groups"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:27
+msgid "roles"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:28
+msgid "user"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:29
+msgid "users"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:30
+msgid "workspace"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:31
+msgid "workspaces"
+msgstr ""
+
+msgid "can't be blank"
+msgstr ""
+
+msgid "has already been taken"
+msgstr ""
+
+#: lib/core/error.ex:43
+msgid "is invalid"
+msgstr ""
+
+msgid "must be accepted"
+msgstr ""
+
+msgid "has invalid format"
+msgstr ""
+
+msgid "has an invalid entry"
+msgstr ""
+
+msgid "is reserved"
+msgstr ""
+
+msgid "does not match confirmation"
+msgstr ""
+
+msgid "is still associated with this entry"
+msgstr ""
+
+msgid "are still associated with this entry"
+msgstr ""
+
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "must be less than %{number}"
+msgstr ""
+
+msgid "must be greater than %{number}"
+msgstr ""
+
+msgid "must be less than or equal to %{number}"
+msgstr ""
+
+msgid "must be greater than or equal to %{number}"
+msgstr ""
+
+msgid "must be equal to %{number}"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:39
+msgid "could not be created"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:40
+msgid "could not be deleted"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:41
+msgid "could not be disabled"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:45
+msgid "could not be updated"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:42
+msgid "is incorrect"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:25
+msgid "login"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:38
+msgid "not authorized"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:44
+msgid "not found"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:32
+msgid "oops"
+msgstr ""
+
+#, elixir-format, fuzzy
+#: lib/core/error.ex:26
+msgid "role"
+msgstr ""
+
+#, elixir-format
+#: lib/core/error.ex:46
+msgid "something went wrong"
+msgstr ""
