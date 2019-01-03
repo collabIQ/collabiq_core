@@ -39,7 +39,8 @@ defmodule Core.Mixfile do
       {:bcrypt_elixir, "~> 1.1"},
       {:timex, "~> 3.4"},
       {:jason, "~> 1.1"},
-      {:dataloader, "~> 1.0"}
+      {:dataloader, "~> 1.0"},
+      {:mariaex, "~> 0.9.1"}
     ]
   end
 
