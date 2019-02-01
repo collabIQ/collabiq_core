@@ -102,21 +102,21 @@ defmodule Core.Kb.Article do
 
   def get_article(_id, _session), do: {:error, Error.message({:user, :authorization})}
 
-  def create_article(%{workspace_id: workspace_id} = attrs, %{tenant_id: tenant_id, permissions: %{create_article: 1}, type: "agent"} = session) do
-    attrs = Map.put(attrs, :tenant_id, tenant_id)
-    article = %Article{id: Repo.binary_id()}
+  # def create_article(%{workspace_id: workspace_id} = attrs, %{tenant_id: tenant_id, permissions: %{create_article: 1}, type: "agent"} = session) do
+  #   attrs = Map.put(attrs, :tenant_id, tenant_id)
+  #   article = %Article{id: Repo.binary_id()}
 
-    with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
-         {:ok, change} <- changeset(article, attrs),
-         {:ok, article} <- Repo.put(change) do
-      {:ok, article}
-    else
-      error ->
-        error
-    end
-  end
+  #   with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
+  #        {:ok, change} <- changeset(article, attrs),
+  #        {:ok, article} <- Repo.put(change) do
+  #     {:ok, article}
+  #   else
+  #     error ->
+  #       error
+  #   end
+  # end
 
-  def create_article(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  # def create_article(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
 
   ##################
   ### Changesets ###
