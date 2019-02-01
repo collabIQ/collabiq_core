@@ -1,6 +1,7 @@
 defmodule Core.Validate do
   @moduledoc false
   alias Core.Error
+  alias Core.Kb.Article
   alias Core.Org.{Assignee, Group, Role, Session, Tenant, User, Workspace}
 
   def binary_id(id) when is_binary(id) do
