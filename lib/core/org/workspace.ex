@@ -5,7 +5,7 @@ defmodule Core.Org.Workspace do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{Group, Session, UserWorkspace, Workspace}
-  alias Core.{Color, Error, Repo, Validate}
+  alias Core.{Color, Error, Query, Repo, Validate}
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
@@ -28,62 +28,16 @@ defmodule Core.Org.Workspace do
   ### API Functions ###
   #####################
   @spec list_workspaces(map(), Session.t()) :: {:ok, [%Workspace{}, ...]} | {:error, [any()]}
-  def list_workspaces(%{admin: admin} = args, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    query =
-      if admin do
-        case permissions do
-          %{update_workspace: 1} ->
-            from(w in Workspace,
-              where: w.tenant_id == ^tenant_id
-            )
-
-          _ ->
-            from(w in Workspace,
-              where: w.tenant_id == ^tenant_id,
-              where: w.id in ^workspaces
-            )
-        end
-      else
-        from(w in Workspace,
-            where: w.tenant_id == ^tenant_id,
-            where: w.id in ^workspaces
-          )
-      end
-
-
-    query
-    |> filter_workspaces(args)
-    |> sort_workspaces(args)
-    |> Repo.all()
-    |> Validate.ecto_read(:workspaces)
+  def list_workspaces(args, session) do
+    from(w in Workspace)
+    |> Query.list(args, session, :workspaces)
   end
-
-  def list_workspaces(_args, _session), do: {:error, Error.message({:user, :authorization})}
 
   @spec get_workspace(String.t(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
   def get_workspace(id, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    query =
-      case permissions do
-        %{update_workspace: 1} ->
-          from(w in Workspace,
-            where: w.tenant_id == ^tenant_id,
-            where: w.id == ^id
-          )
-
-        _ ->
-          from(w in Workspace,
-            where: w.tenant_id == ^tenant_id,
-            where: w.id == ^id,
-            where: w.id in ^workspaces
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:workspace)
+    from(w in Workspace)
+    |> Query.get(id, session, :workspace)
   end
-
-  def get_workspace(_id, _session), do: {:error, Error.message({:user, :authorization})}
 
   def create_workspace(attrs, %{tenant_id: tenant_id, permissions: %{create_workspace: 1}, type: "agent"}) do
     attrs = Map.put(attrs, :tenant_id, tenant_id)
