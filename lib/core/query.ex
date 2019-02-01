@@ -1,30 +1,33 @@
 defmodule Core.Query do
   @moduledoc false
   import Ecto.Query, warn: false
+  alias Core.Org.Session
   alias Core.{Error, Repo, Validate}
 
-  def get(query, id, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, type) do
+  @spec get(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
+  def get(query, id, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
       where: q.tenant_id == ^tenant_id,
       where: q.id == ^id
     )
-    |> permissions(session, type)
+    |> permissions(session, schema)
     |> Repo.one()
-    |> Validate.ecto_read(type)
+    |> Validate.ecto_read(schema)
   end
 
   def get(_query, _id, _session, _type), do: {:error, Error.message({:user, :authorization})}
 
-  def list(query, args, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, type) do
+  @spec list(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, [any(),...]} | {:error, [any()]}
+  def list(query, args, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
       where: q.tenant_id == ^tenant_id
     )
-    |> permissions(session, type)
-    |> admin(args, session, type)
-    |> filter(args, type)
-    |> sort(args, type)
+    |> permissions(session, schema)
+    |> admin(args, session, schema)
+    |> filter(args, schema)
+    |> sort(args, schema)
     |> Repo.all()
-    |> Validate.ecto_read(type)
+    |> Validate.ecto_read(schema)
   end
 
   def list(_query, _args, _session, _type), do: {:error, Error.message({:user, :authorization})}
@@ -77,13 +80,13 @@ defmodule Core.Query do
     end
   end
 
-  def filter(query, %{filter: filter}, type) do
+  def filter(query, %{filter: filter}, schema) do
     filter
     |> Enum.reduce(query, fn
       {:email, email}, query when is_nil(email) or email == "" ->
         query
 
-      {:email, email}, query when type in [:users] ->
+      {:email, email}, query when schema in [:users] ->
         from(q in query,
           where: ilike(q.email, ^"%#{String.downcase(email)}%")
         )
@@ -104,7 +107,7 @@ defmodule Core.Query do
       {:status, _}, query ->
         query
 
-      {:type, [_|_] = type}, query when type in [:groups, :users] ->
+      {:type, [_|_] = type}, query when schema in [:groups, :users] ->
         from(q in query,
           where: q.type in ^type
         )
