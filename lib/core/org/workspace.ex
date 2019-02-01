@@ -34,7 +34,7 @@ defmodule Core.Org.Workspace do
   end
 
   @spec get_workspace(String.t(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
-  def get_workspace(id, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
+  def get_workspace(id, session) do
     from(w in Workspace)
     |> Query.get(id, session, :workspace)
   end
@@ -163,81 +163,7 @@ defmodule Core.Org.Workspace do
   ########################
   ### Helper Functions ###
   ########################
-  def filter_workspaces(query, %{filter: filter}) do
-    filter
-    |> Enum.reduce(query, fn
-      {:name, name}, query ->
-        from(q in query,
-          where: ilike(q.name, ^"%#{String.downcase(name)}%")
-        )
 
-      {:status, [_|_] = status}, query ->
-        from(q in query,
-          where: q.status in ^status
-        )
-
-      {:status, _}, query ->
-        query
-    end)
-  end
-
-  def filter_workspaces(query, _filter), do: query
-
-  def sort_workspaces(query, %{sort: %{field: field, order: "asc"}}) when field in ["created", "name", "status", "updated"] do
-    case field do
-      "created" ->
-        from(q in query,
-          order_by: [asc: :created_at]
-        )
-
-      "name" ->
-        from(q in query,
-          order_by: fragment("lower(?) ASC", q.name)
-        )
-
-      "status" ->
-        from(q in query,
-          order_by: [asc: :status],
-          order_by: fragment("lower(?) ASC", q.name)
-        )
-
-      "updated" ->
-        from(q in query,
-          order_by: [asc: :updated_at]
-        )
-    end
-  end
-
-  def sort_workspaces(query, %{sort: %{field: field, order: "desc"}}) when field in ["created", "name", "status", "updated"] do
-    case field do
-      "created" ->
-        from(q in query,
-          order_by: [desc: :created_at]
-        )
-
-      "name" ->
-        from(q in query,
-          order_by: fragment("lower(?) DESC", q.name)
-        )
-
-      "status" ->
-        from(q in query,
-          order_by: [desc: :status],
-          order_by: fragment("lower(?) ASC", q.name)
-        )
-
-      "updated" ->
-        from(q in query,
-          order_by: [desc: :updated_at]
-        )
-    end
-  end
-
-  def sort_workspaces(query, _args) do
-    from(q in query,
-        order_by: fragment("lower(?) ASC", q.name)
-      )
-  end
   def validate_update_permissions(id, %{permissions: %{update_workspace: p}, type: "agent"} = session)
       when p in [1, 2] do
     with {:ok, workspace} <- get_workspace(id, session) do

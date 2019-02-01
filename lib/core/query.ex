@@ -21,7 +21,7 @@ defmodule Core.Query do
     )
     |> permissions(session, type)
     |> admin(args, session, type)
-    |> filter(args)
+    |> filter(args, type)
     |> sort(args, type)
     |> Repo.all()
     |> Validate.ecto_read(type)
@@ -29,20 +29,23 @@ defmodule Core.Query do
 
   def list(_query, _args, _session, _type), do: {:error, Error.message({:user, :authorization})}
 
-  def filter(query, %{filter: _f} = args) do
-    query
-    |> filter_handle(args)
-  end
-
-  def filter(query, _args) do
-    query
-  end
-
-  def admin(query, %{admin: admin}, %{workspaces: workspaces}, :workspaces) do
+  def admin(query, %{admin: admin}, %{workspaces: workspaces}, type) when type == :workspaces do
     case admin do
       false ->
         from(q in query,
           where: q.id in ^workspaces
+        )
+
+      _ ->
+        query
+    end
+  end
+
+  def admin(query, %{admin: admin}, %{workspaces: workspaces}, _type) do
+    case admin do
+      false ->
+        from(q in query,
+          where: q.workspace_id in ^workspaces
         )
 
       _ ->
@@ -62,33 +65,25 @@ defmodule Core.Query do
     end
   end
 
-  def sort(query, %{sort: %{field: field}} = args, :users) when field in ["created", "email", "name", "status", "type", "updated"] do
-    query
-    |> sort_handle(args)
+  def permissions(query, %{permissions: permissions, workspaces: workspaces}, _type) do
+    case permissions do
+      %{update_workspace: 1} ->
+        query
+
+      _ ->
+        from(q in query,
+          where: q.workspace_id in ^workspaces
+        )
+    end
   end
 
-  def sort(query, %{sort: %{field: field}} = args, :workspaces) when field in ["created", "name", "status", "updated"] do
-    query
-    |> sort_handle(args)
-  end
-
-  def sort(query, _sort, type) when type in [:users, :workspaces] do
-    from(q in query,
-      order_by: fragment("lower(?) ASC", q.name)
-    )
-  end
-
-  def sort(query, _args, _type) do
-    query
-  end
-
-  def filter_handle(query, %{filter: filter}) do
+  def filter(query, %{filter: filter}, type) do
     filter
     |> Enum.reduce(query, fn
       {:email, email}, query when is_nil(email) or email == "" ->
         query
 
-      {:email, email}, query ->
+      {:email, email}, query when type in [:users] ->
         from(q in query,
           where: ilike(q.email, ^"%#{String.downcase(email)}%")
         )
@@ -109,7 +104,7 @@ defmodule Core.Query do
       {:status, _}, query ->
         query
 
-      {:type, [_|_] = type}, query ->
+      {:type, [_|_] = type}, query when type in [:groups, :users] ->
         from(q in query,
           where: q.type in ^type
         )
@@ -119,75 +114,50 @@ defmodule Core.Query do
     end)
   end
 
-  def sort_handle(query, %{sort: %{field: field, order: "asc"}}, type) do
+  def sort(query, %{sort: %{field: field, order: order}}, type) when order in ["asc", "desc"] do
     case field do
-      "created" ->
+      "created" when type in [:groups, :workspaces] ->
         from(q in query,
-          order_by: [asc: :created_at]
+          order_by: fragment("created_at ?", ^order)
         )
 
       "email" ->
         from(q in query,
-          order_by: [asc: :email]
+          order_by: fragment("lower(?) ?", q.email, ^order)
         )
 
-      "name" ->
+      "name" when type in [:groups, :workspaces] ->
         from(q in query,
+          order_by: fragment("lower(?) ?", q.name, ^order)
+        )
+
+      "status" when type in [:groups, :workspaces] ->
+        from(q in query,
+          order_by: fragment("status ?", ^order),
           order_by: fragment("lower(?) ASC", q.name)
         )
 
-      "status" ->
+      "type" when type in [:groups] ->
         from(q in query,
-          order_by: [asc: :status],
+          order_by: fragment("type ?", ^order),
           order_by: fragment("lower(?) ASC", q.name)
         )
 
-      "type" ->
+      "updated" when type in [:groups, :workspaces] ->
         from(q in query,
-          order_by: [asc: :type],
-          order_by: fragment("lower(?) ASC", q.name)
+          order_by: fragment("updated_at ?", ^order)
         )
 
-      "updated" ->
-        from(q in query,
-          order_by: [asc: :updated_at]
-        )
+      _ ->
+        query
     end
   end
 
-  def sort_handle(query, %{sort: %{field: field, order: "desc"}}) do
-    case field do
-      "created" ->
-        from(q in query,
-          order_by: [desc: :created_at]
-        )
-
-      "email" ->
-        from(q in query,
-          order_by: [desc: :created_at]
-        )
-
-      "name" ->
-        from(q in query,
-          order_by: fragment("lower(?) DESC", q.name)
-        )
-
-      "status" ->
-        from(q in query,
-          order_by: [desc: :status],
-          order_by: fragment("lower(?) ASC", q.name)
-        )
-
-      "type" ->
-        from(q in query,
-          order_by: [desc: :type],
-          order_by: fragment("lower(?) ASC", q.name)
-        )
-
-      "updated" ->
-        from(q in query,
-          order_by: [desc: :updated_at]
-        )
-    end
+  def sort(query, _args, type) when type in [:groups, :users, :workspaces] do
+    from(q in query,
+      order_by: fragment("lower(?) ASC", q.name)
+    )
   end
+
+  def sort(query, _args, _type), do: query
 end
