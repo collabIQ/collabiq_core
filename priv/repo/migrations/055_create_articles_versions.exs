@@ -16,6 +16,5 @@ defmodule Core.Repo.Migrations.CreateArticlesVersions do
 
     create index(:articles_versions, [:tenant_id])
     create index(:articles_versions, [:user_id])
-    create index(:articles_versions, [:workspace_id])
   end
 end

@@ -17,13 +17,20 @@ defmodule Core.Query do
 
   def get(_query, _id, _session, _type), do: {:error, Error.message({:user, :authorization})}
 
-  @spec list(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, [any(),...]} | {:error, [any()]}
-  def list(query, args, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
+  @spec list(Ecto.Query.t(), map(), Session.t(), atom()) ::
+          {:ok, [any(), ...]} | {:error, [any()]}
+  def list(
+        query,
+        args,
+        %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session,
+        schema
+      ) do
     from(q in query,
       where: q.tenant_id == ^tenant_id
     )
     |> permissions(session, schema)
     |> admin(args, session, schema)
+    |> agent(session, schema)
     |> filter(args, schema)
     |> sort(args, schema)
     |> Repo.all()
@@ -32,50 +39,61 @@ defmodule Core.Query do
 
   def list(_query, _args, _session, _type), do: {:error, Error.message({:user, :authorization})}
 
-  def admin(query, %{admin: admin}, %{workspaces: workspaces}, type) when type == :workspaces do
-    case admin do
-      false ->
-        from(q in query,
-          where: q.id in ^workspaces
-        )
+  def admin(query, args, %{workspaces: workspaces}, schema) do
+    id =
+      case schema do
+        :workspaces ->
+          :id
+
+        _ ->
+          :workspace_id
+      end
+
+    case args do
+      {:admin, true} ->
+        query
 
       _ ->
-        query
+        from(q in query,
+          where: field(q, ^id) in ^workspaces
+        )
     end
   end
 
-  def admin(query, %{admin: admin}, %{workspaces: workspaces}, _type) do
-    case admin do
-      false ->
-        from(q in query,
-          where: q.workspace_id in ^workspaces
-        )
+  def agent(query, session, schema) when schema in [:article, :articles] do
+    case session do
+      {:type, "agent"} ->
+        query
 
       _ ->
-        query
+        from(q in query,
+          where: q.type == ^"contact"
+        )
     end
   end
 
-  def permissions(query, %{permissions: permissions, workspaces: workspaces}, type) when type in [:workspace, :workspaces] do
+  def agent(query, _session, _schema), do: query
+
+  def permissions(query, %{permissions: permissions, workspaces: workspaces}, schema) do
+    id =
+      case schema do
+        :workspace ->
+          :id
+
+        :workspaces ->
+          :id
+
+        _ ->
+          :workspace_id
+      end
+
     case permissions do
       %{update_workspace: 1} ->
         query
 
       _ ->
         from(q in query,
-          where: q.id in ^workspaces
-        )
-    end
-  end
-
-  def permissions(query, %{permissions: permissions, workspaces: workspaces}, _type) do
-    case permissions do
-      %{update_workspace: 1} ->
-        query
-
-      _ ->
-        from(q in query,
-          where: q.workspace_id in ^workspaces
+          where: field(q, ^id) in ^workspaces
         )
     end
   end
@@ -99,7 +117,7 @@ defmodule Core.Query do
           where: ilike(q.name, ^"%#{String.downcase(name)}%")
         )
 
-      {:status, [_|_] = status}, query ->
+      {:status, [_ | _] = status}, query ->
         from(q in query,
           where: q.status in ^status
         )
@@ -107,7 +125,7 @@ defmodule Core.Query do
       {:status, _}, query ->
         query
 
-      {:type, [_|_] = type}, query when schema in [:groups, :users] ->
+      {:type, [_ | _] = type}, query when schema in [:groups, :users] ->
         from(q in query,
           where: q.type in ^type
         )

@@ -5,7 +5,7 @@ defmodule Core.Org.Group do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{AgentGroup, ContactGroup, Group, Session, UserGroup, Workspace}
-  alias Core.{Error, Query, Repo, Validate}
+  alias Core.{Query, Repo, Validate}
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id

@@ -17,11 +17,10 @@ defmodule Core.Org.Permission do
     field(:create_contact_group, :integer, default: 0)
     # 0 = no, 1 = yes
     field(:create_workspace, :integer, default: 0)
-    field(:manage_folder, :integer, default: 0)
     # 0 = no, 1 = yes
+    field(:publish_article, :integer, default: 0)
     field(:update_tenant, :integer, default: 0)
     field(:update_article, :integer, default: 0)
-    field(:update_folder, :integer, default: 0)
     # 0 = no, 1 = yes
     field(:update_agent, :integer, default: 0)
     # 0 = no, 1 = all, 2 = yes for groups where the user is a member
@@ -38,13 +37,12 @@ defmodule Core.Org.Permission do
 
   @required [
     :create_article,
-    :create_folder,
     :create_group,
     :create_user,
     :create_workspace,
+    :publish_article,
     :update_article,
     :update_tenant,
-    :update_folder,
     :update_group,
     :update_role,
     :update_user,
