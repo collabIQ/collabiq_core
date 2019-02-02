@@ -56,7 +56,7 @@ defmodule Core.Kb.Article do
   ##################
 
   @optional [:pinned]
-  @required [:content, :name, :status, :tenant, :type, :workspace_id]
+  @required [:content, :name, :status, :tenant_id, :type, :workspace_id]
 
   def changeset(%Article{} = article, attrs) do
     article
