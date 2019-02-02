@@ -37,11 +37,10 @@ defmodule Core.Kb.Article do
 
   def create_article(attrs, %{tenant_id: tenant_id, permissions: %{create_article: 1}, type: "agent"} = session) do
     attrs = Map.put(attrs, :tenant_id, tenant_id)
-    %{workspace_id: workspace_id} = attrs
     article = %Article{id: Repo.binary_id()}
 
-    with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
-         {:ok, change} <- changeset(article, attrs),
+    with {:ok, %{params: %{"workspace_id" => workspace_id}} = change} <- changeset(article, attrs),
+         {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
          {:ok, article} <- Repo.put(change) do
       {:ok, article}
     else
