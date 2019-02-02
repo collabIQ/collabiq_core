@@ -135,6 +135,8 @@ defmodule Core.Query do
     end)
   end
 
+  def filter(query, _args, _schema), do: query
+
   def sort(query, %{sort: %{field: field, order: order}}, type) when order in ["asc", "desc"] do
     case field do
       "created" when type in [:groups, :workspaces] ->

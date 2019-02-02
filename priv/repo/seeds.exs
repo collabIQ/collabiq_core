@@ -66,7 +66,6 @@ admin_perms = %{
   create_article: 1,
   create_contact: 1,
   create_contact_group: 1,
-  create_folder: 1,
   create_workspace: 1,
   update_tenant: 1,
   update_agent: 1,
@@ -74,9 +73,11 @@ admin_perms = %{
   update_article: 1,
   update_contact: 1,
   update_contact_group: 1,
-  update_folder: 1,
   update_role: 1,
-  update_workspace: 1
+  update_workspace: 1,
+  create_article: 1,
+  publish_article: 1,
+  update_articles: 1
 }
 
 wsadmin_perms = %{
@@ -85,7 +86,6 @@ wsadmin_perms = %{
   create_article: 1,
   create_contact: 1,
   create_contact_group: 1,
-  create_folder: 1,
   create_workspace: 0,
   update_tenant: 1,
   update_agent: 1,
@@ -93,9 +93,11 @@ wsadmin_perms = %{
   update_article: 1,
   update_contact: 1,
   update_contact_group: 1,
-  update_folder: 1,
   update_role: 0,
-  update_workspace: 2
+  update_workspace: 2,
+  create_article: 1,
+  publish_article: 1,
+  update_articles: 1
 }
 
 agent_perms = %{
@@ -104,7 +106,6 @@ agent_perms = %{
   create_article: 1,
   create_contact: 1,
   create_contact_group: 1,
-  create_folder: 1,
   create_workspace: 0,
   update_tenant: 0,
   update_agent: 0,
@@ -112,9 +113,11 @@ agent_perms = %{
   update_article: 1,
   update_contact: 1,
   update_contact_group: 1,
-  update_folder: 1,
   update_role: 0,
-  update_workspace: 0
+  update_workspace: 0,
+  create_article: 1,
+  publish_article: 0,
+  update_articles: 1
 }
 
 user_perms = %{
@@ -123,7 +126,6 @@ user_perms = %{
   create_article: 0,
   create_contact: 0,
   create_contact_group: 0,
-  create_folder: 0,
   create_workspace: 0,
   update_tenant: 0,
   update_agent: 0,
@@ -131,7 +133,6 @@ user_perms = %{
   update_article: 0,
   update_contact: 0,
   update_contact_group: 0,
-  update_folder: 0,
   update_role: 0,
   update_workspace: 0
 }
