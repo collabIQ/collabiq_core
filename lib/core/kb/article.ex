@@ -35,8 +35,9 @@ defmodule Core.Kb.Article do
     |> Query.get(id, session, :article)
   end
 
-  def create_article(%{workspace_id: workspace_id} = attrs, %{tenant_id: tenant_id, permissions: %{create_article: 1}, type: "agent"} = session) do
+  def create_article(attrs, %{tenant_id: tenant_id, permissions: %{create_article: 1}, type: "agent"} = session) do
     attrs = Map.put(attrs, :tenant_id, tenant_id)
+    %{workspace_id: workspace_id} = attrs
     article = %Article{id: Repo.binary_id()}
 
     with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),

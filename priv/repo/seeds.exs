@@ -77,7 +77,7 @@ admin_perms = %{
   update_workspace: 1,
   create_article: 1,
   publish_article: 1,
-  update_articles: 1
+  update_article: 1
 }
 
 wsadmin_perms = %{
@@ -97,7 +97,7 @@ wsadmin_perms = %{
   update_workspace: 2,
   create_article: 1,
   publish_article: 1,
-  update_articles: 1
+  update_article: 1
 }
 
 agent_perms = %{
@@ -117,7 +117,7 @@ agent_perms = %{
   update_workspace: 0,
   create_article: 1,
   publish_article: 0,
-  update_articles: 1
+  update_article: 1
 }
 
 user_perms = %{
