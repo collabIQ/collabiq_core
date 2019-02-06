@@ -22,6 +22,7 @@ defmodule Core.Repo.Migrations.CreateUsers do
       add :type, :string, null: false
 
       timestamps([inserted_at: :created_at, type: :utc_datetime])
+      add :deleted_at, :utc_datetime
     end
 
     create index(:users, [:tenant_id])
