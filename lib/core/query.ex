@@ -4,8 +4,8 @@ defmodule Core.Query do
   alias Core.Org.Session
   alias Core.{Error, Repo, Validate}
 
-  @spec get(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
-  def get(query, id, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
+  @spec edit(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
+  def edit(query, id, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
       where: q.tenant_id == ^tenant_id,
       where: q.id == ^id
@@ -15,34 +15,42 @@ defmodule Core.Query do
     |> Validate.ecto_read(schema)
   end
 
-  def get(_query, _id, _session, _type), do: {:error, Error.message({:user, :authorization})}
+  def edit(_query, _id, _session, _schema), do: {:error, Error.message({:user, :authorization})}
 
-  @spec list(Ecto.Query.t(), map(), Session.t(), atom()) ::
-          {:ok, [any(), ...]} | {:error, [any()]}
-  def list(
-        query,
-        args,
-        %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session,
-        schema
-      ) do
+  @spec get(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
+  def get(query, %{id: id} = args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
-      where: q.tenant_id == ^tenant_id
+      where: q.tenant_id == ^t_id,
+      where: q.id == ^id
     )
     |> permissions(session, schema)
-    |> admin(args, session, schema)
-    |> agent(session, schema)
     |> filter(args, schema)
-    |> sort(args, schema)
-    |> Repo.all()
+    |> Repo.single()
     |> Validate.ecto_read(schema)
   end
 
-  def list(_query, _args, _session, _type), do: {:error, Error.message({:user, :authorization})}
+  def get(_query, _id, _session, _schema), do: {:error, Error.message({:user, :authorization})}
+
+  @spec list(Ecto.Query.t(), map(), Session.t(), atom()) ::
+          {:ok, [any(), ...]} | {:error, [any()]}
+  def list(query, args, %{tenant_id: t, permissions: _p, workspaces: _w} = session, schema) do
+    from(q in query,
+      where: q.tenant_id == ^t
+    )
+    |> permissions(session, schema)
+    |> admin(args, session, schema)
+    |> filter(args, schema)
+    |> sort(args, schema)
+    |> Repo.full()
+    |> Validate.ecto_read(schema)
+  end
+
+  def list(_query, _args, _session, _schema), do: {:error, Error.message({:user, :authorization})}
 
   def admin(query, args, %{workspaces: workspaces}, schema) do
     id =
       case schema do
-        :workspaces ->
+        _ when schema in [:user, :users, :workspace, :workspaces] ->
           :id
 
         _ ->
@@ -50,8 +58,15 @@ defmodule Core.Query do
       end
 
     case args do
-      {:admin, true} ->
+      %{admin: true} ->
         query
+
+      _ when schema in [:user, :users] ->
+        from(q in query,
+          join: w in assoc(q, :workspaces),
+          where: field(w, ^id) in ^workspaces,
+          preload: [workspaces: w]
+        )
 
       _ ->
         from(q in query,
@@ -60,27 +75,10 @@ defmodule Core.Query do
     end
   end
 
-  def agent(query, session, schema) when schema in [:article, :articles] do
-    case session do
-      {:type, "agent"} ->
-        query
-
-      _ ->
-        from(q in query,
-          where: q.type == ^"contact"
-        )
-    end
-  end
-
-  def agent(query, _session, _schema), do: query
-
   def permissions(query, %{permissions: permissions, workspaces: workspaces}, schema) do
     id =
       case schema do
-        :workspace ->
-          :id
-
-        :workspaces ->
+        _ when schema in [:user, :users, :workspace, :workspaces] ->
           :id
 
         _ ->
@@ -90,6 +88,11 @@ defmodule Core.Query do
     case permissions do
       %{update_workspace: 1} ->
         query
+
+      _ when schema in [:user, :users] ->
+        from([q, w] in query,
+          where: field(w, ^id) in ^workspaces
+        )
 
       _ ->
         from(q in query,
@@ -132,55 +135,126 @@ defmodule Core.Query do
 
       {:type, _}, query ->
         query
+
+      {:workspaces, [_ | _] = work}, query when schema in [:user, :users] ->
+        from([q, j] in query,
+          where: j.id in ^work
+        )
+
+      {:workspaces, [_ | _] = work}, query ->
+        from(q in query,
+          where: q.workspace_id in ^work
+        )
+
+      {:workspaces, _}, query ->
+        query
     end)
   end
 
   def filter(query, _args, _schema), do: query
 
-  def sort(query, %{sort: %{field: field, order: order}}, type) when order in ["asc", "desc"] do
+  def sort(query, %{sort: %{field: field, order: order}}, schema) when order in ["asc", "desc"] do
     case field do
-      "created" when type in [:groups, :workspaces] ->
-        from(q in query,
-          order_by: fragment("created_at ?", ^order)
-        )
+      "created" when schema in [:groups, :workspaces] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: [desc: q.created_at]
+            )
 
-      "email" ->
-        from(q in query,
-          order_by: fragment("lower(?) ?", q.email, ^order)
-        )
+          _ ->
+            from(q in query,
+              order_by: [asc: q.created_at]
+            )
+        end
 
-      "name" when type in [:groups, :workspaces] ->
-        from(q in query,
-          order_by: fragment("lower(?) ?", q.name, ^order)
-        )
+      "email" when schema in [:users] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: fragment("lower(email) DESC")
+            )
 
-      "status" when type in [:groups, :workspaces] ->
-        from(q in query,
-          order_by: fragment("status ?", ^order),
-          order_by: fragment("lower(?) ASC", q.name)
-        )
+          _ ->
+            from(q in query,
+              order_by: fragment("lower(email) ASC")
+            )
+        end
 
-      "type" when type in [:groups] ->
-        from(q in query,
-          order_by: fragment("type ?", ^order),
-          order_by: fragment("lower(?) ASC", q.name)
-        )
+      "name" when schema in [:groups, :workspaces] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: fragment("lower(name) DESC")
+            )
 
-      "updated" when type in [:groups, :workspaces] ->
-        from(q in query,
-          order_by: fragment("updated_at ?", ^order)
-        )
+          _ ->
+            from(q in query,
+              order_by: fragment("lower(name) ASC")
+            )
+        end
+
+      "status" when schema in [:groups, :workspaces] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: [desc: q.status],
+              order_by: fragment("lower(name) ASC")
+            )
+
+          _ ->
+            from(q in query,
+              order_by: [asc: q.status],
+              order_by: fragment("lower(name) ASC")
+            )
+        end
+
+      "type" when schema in [:groups] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: [:desc, q.type],
+              order_by: fragment("lower(name) ASC")
+            )
+
+          _ ->
+            from(q in query,
+              order_by: [asc: q.type],
+              order_by: fragment("lower(name) ASC")
+            )
+        end
+
+      "updated" when schema in [:groups, :workspaces] ->
+        case order do
+          "desc" ->
+            from(q in query,
+              order_by: [desc: q.updated_at]
+            )
+
+          _ ->
+            from(q in query,
+              order_by: [asc: q.updated_at]
+            )
+        end
 
       _ ->
-        query
+        from(q in query,
+          order_by: fragment("lower(?) ASC", q.name)
+        )
     end
   end
 
-  def sort(query, _args, type) when type in [:groups, :users, :workspaces] do
-    from(q in query,
+  def sort(query, _args, schema) when schema in [:users] do
+    from([q, j] in query,
       order_by: fragment("lower(?) ASC", q.name)
     )
   end
 
-  def sort(query, _args, _type), do: query
+  def sort(query, _args, schema) when schema in [:groups, :workspaces] do
+    from(q in query,
+      order_by: fragment("lower(name) ASC")
+    )
+  end
+
+  def sort(query, _args, _schema), do: query
 end

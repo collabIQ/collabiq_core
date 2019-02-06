@@ -1,69 +1,19 @@
 defmodule Core.Org.Agent do
   @moduledoc false
   use Ecto.Schema
+  use Timex
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{AgentGroup, User, UserGroup, UserWorkspace, Workspace}
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Query, Repo, UUID, Validate}
 
   #####################
   ### API Functions ###
   #####################
-  def list_agents(args, %{
-        tenant_id: tenant_id,
-        permissions: permissions,
-        workspaces: workspaces
-      }) do
-    case permissions do
-      %{update_workspace: 1} ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id,
-          where: u.type == ^"agent"
-        )
-
-      _ ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id,
-          where: u.type == ^"agent",
-          join: w in assoc(u, :workspaces),
-          where: w.id in ^workspaces
-        )
-    end
-    |> User.filter_users(args)
-    |> User.sort_users(args)
-    |> Repo.all()
-    |> Validate.ecto_read(:users)
+  defp edit_agent(id, session) do
+    from(u in User, where: u.type == ^"agent")
+    |> Query.edit(id, session, :user)
   end
-
-  def list_agents(_args, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def get_agent(id, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    query =
-      case permissions do
-        %{update_workspace: 1} ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id,
-            where: u.type == ^"agent"
-          )
-
-        _ ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id,
-            where: u.type == ^"agent",
-            join: w in assoc(u, :workspaces),
-            where: w.id in ^workspaces,
-            preload: [workspaces: w]
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:user)
-  end
-
-  def get_agent(_id, _session), do: {:error, Error.message({:user, :authorization})}
 
   def get_agent_by_workspace(id, workspace_id, %{tenant_id: tenant_id}) do
     query =
@@ -81,12 +31,11 @@ defmodule Core.Org.Agent do
 
   def create_agent(
         attrs,
-        %{tenant_id: tenant_id, permissions: %{create_agent: 1}, type: "agent"} = session
+        %{tenant_id: t_id, permissions: %{create_agent: 1}, type: "agent"} = session
       ) do
-    attrs = Map.put(attrs, :tenant_id, tenant_id)
-    user = %User{id: Repo.binary_id(), type: "agent"}
 
-    with {:ok, change} <- User.changeset(user, attrs, session),
+    with {:ok, binary_id} <- UUID.bin_gen(),
+         {:ok, change} <- User.changeset(%User{id: binary_id, tenant_id: t_id, type: "agent"}, attrs, session),
          {:ok, user} <- Repo.put(change) do
       {:ok, user}
     else
@@ -97,8 +46,28 @@ defmodule Core.Org.Agent do
 
   def create_agent(_attrs, _session), do: Error.message({:user, :authorization})
 
-  def update_agent(%{id: id} = attrs, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
-    with {:ok, user} <- get_agent(id, session),
+  def update_agent(attrs, session) do
+    attrs
+    |> modify_agent(session)
+  end
+
+  def disable_agent(id, session) do
+    %{status: "disabled", deleted_at: nil, id: id}
+    |> modify_agent(session)
+  end
+
+  def delete_agent(id, session) do
+    %{status: "deleted", deleted_at: Timex.now(), id: id}
+    |> modify_agent(session)
+  end
+
+  def enable_agent(id, session) do
+    %{status: "active", deleted_at: nil, id: id}
+    |> modify_agent(session)
+  end
+
+  defp modify_agent(%{id: id} = attrs, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
+    with {:ok, user} <- edit_agent(id, session),
          {:ok, change} <- User.changeset(user, attrs, session),
          {:ok, user} <- Repo.put(change) do
       {:ok, user}
@@ -108,52 +77,7 @@ defmodule Core.Org.Agent do
     end
   end
 
-  def update_agent(_attrs, _session), do: Error.message({:user, :authorization})
-
-  def disable_agent(id, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
-    attrs = %{status: "disabled"}
-
-    with {:ok, user} <- get_agent(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def disable_agent(_id, _session), do: Error.message({:user, :authorization})
-
-  def delete_agent(id, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
-    attrs = %{status: "deleted"}
-
-    with {:ok, user} <- get_agent(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def delete_agent(_id, _session), do: Error.message({:user, :authorization})
-
-  def enable_agent(id, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
-    attrs = %{status: "active"}
-
-    with {:ok, user} <- get_agent(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def enable_agent(_id, _session), do: Error.message({:user, :authorization})
+  defp modify_agent(_attrs, _session), do: Error.message({:user, :authorization})
 
   ##################
   ### Changesets ###
@@ -257,7 +181,7 @@ defmodule Core.Org.Agent do
 
     users_groups
     |> Enum.map(fn %{group_id: group_id} = group_user ->
-      case AgentGroup.validate_update_permissions(group_id, session) do
+      case AgentGroup.edit_agent_group(group_id, session) do
         {:ok, _group} ->
           []
 
@@ -271,7 +195,7 @@ defmodule Core.Org.Agent do
   defp param_groups(param_groups, user_id, workspaces, session) do
     param_groups
     |> Enum.map(fn group_id ->
-      case AgentGroup.validate_update_permissions(group_id, session) do
+      case AgentGroup.edit_agent_group(group_id, session) do
         {:ok, group} ->
           if group.workspace_id in workspaces do
             %UserGroup{

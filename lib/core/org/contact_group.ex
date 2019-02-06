@@ -5,52 +5,27 @@ defmodule Core.Org.ContactGroup do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{Contact, Group, UserGroup, Workspace}
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Query, Repo, UUID}
 
   #####################
   ### API Functions ###
   #####################
 
-  def edit_contact_group(id, %{
-        tenant_id: tenant_id,
-        permissions: permissions,
-        workspaces: workspaces
-      }) do
-    query =
-      case permissions do
-        %{update_contact_group: 1, update_workspace: 1} ->
-          from(g in Group,
-            where: g.id == ^id,
-            where: g.type == ^"contact",
-            where: g.tenant_id == ^tenant_id
-          )
-
-        %{update_contact_group: 1} ->
-          from(g in Group,
-            where: g.id == ^id,
-            where: g.type == ^"contact",
-            where: g.tenant_id == ^tenant_id,
-            where: g.workspace_id in ^workspaces
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:group)
+  def edit_contact_group(id, %{permissions: %{update_contact_group: 1}} = session) do
+    from(g in Group, where: g.type == ^"contact")
+    |> Query.edit(id, session, :group)
   end
 
-  def edit_contact_group(_id, _session), do: {:error, Error.message({:user, :authorization})}
-
   def create_contact_group(
-        %{workspace_id: workspace_id} = attrs,
-        %{tenant_id: tenant_id, permissions: %{create_contact_group: 1}, type: "agent"} =
+        %{workspace_id: w_id} = attrs,
+        %{tenant_id: t_id, permissions: %{create_contact_group: 1}, type: "agent"} =
           session
       ) do
-    attrs = Map.put(attrs, :tenant_id, tenant_id)
-    group = %Group{id: Repo.binary_id(), type: "contact"}
+    attrs = Map.put(attrs, :tenant_id, t_id)
 
-    with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
+    with {:ok, binary_id} <- UUID.bin_gen(),
+         {:ok, change} <- Group.changeset(%Group{id: binary_id, type: "contact"}, attrs, session),
+         {:ok, _workspace} <- Workspace.get_workspace(w_id, session),
          {:ok, group} <- Repo.put(change) do
       {:ok, group}
     else
@@ -61,12 +36,27 @@ defmodule Core.Org.ContactGroup do
 
   def create_contact_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
 
-  def update_contact_group(
-        %{id: id} = attrs,
-        %{permissions: %{update_contact_group: 1}, type: "agent"} = session
-      ) do
-    attrs = Map.drop(attrs, [:workspace_id])
+  def update_contact_group(attrs, session) do
+    Map.drop(attrs, [:workspace_id])
+    |> modify_contact_group(session)
+  end
 
+  def delete_contact_group(id, session) do
+    %{status: "deleted", deleted_at: Timex.now(), id: id}
+    |> modify_contact_group(session)
+  end
+
+  def disable_contact_group(id, session) do
+    %{status: "disabled", deleted_at: nil, id: id}
+    |> modify_contact_group(session)
+  end
+
+  def enable_contact_group(id, session) do
+    %{status: "active", deleted_at: nil, id: id}
+    |> modify_contact_group(session)
+  end
+
+  def modify_contact_group(%{id: id} = attrs, %{permissions: %{update_contact_group: 1}, type: "agent"} = session) do
     with {:ok, group} <- edit_contact_group(id, session),
          {:ok, change} <- Group.changeset(group, attrs, session),
          {:ok, group} <- Repo.put(change) do
@@ -77,62 +67,7 @@ defmodule Core.Org.ContactGroup do
     end
   end
 
-  def update_contact_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def delete_contact_group(
-        id,
-        %{permissions: %{update_contact_group: 1}, type: "agent"} = session
-      ) do
-    attrs = %{}
-
-    with {:ok, group} <- edit_contact_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.destroy(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def delete_contact_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def disable_contact_group(
-        id,
-        %{permissions: %{update_contact_group: 1}, type: "agent"} = session
-      ) do
-    attrs = %{status: "disabled"}
-
-    with {:ok, group} <- edit_contact_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.put(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def disable_contact_group(_attrs, _session),
-    do: {:error, Error.message({:user, :authorization})}
-
-  def enable_contact_group(
-        id,
-        %{permissions: %{update_contact_group: 1}, type: "agent"} = session
-      ) do
-    attrs = %{status: "active"}
-
-    with {:ok, group} <- edit_contact_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.put(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def enable_contact_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  def modify_contact_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
 
   ##################
   ### Changesets ###
@@ -160,16 +95,4 @@ defmodule Core.Org.ContactGroup do
   end
 
   def change_users_groups(changeset, _session), do: changeset
-
-  ########################
-  ### Helper Functions ###
-  ########################
-  def validate_update_permissions(id, %{permissions: %{update_contact_group: 1}} = session) do
-    with {:ok, group} <- edit_contact_group(id, session) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
 end

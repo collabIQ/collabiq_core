@@ -1,69 +1,20 @@
 defmodule Core.Org.Contact do
   @moduledoc false
   use Ecto.Schema
+  use Timex
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{ContactGroup, User, UserGroup, UserWorkspace, Workspace}
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Query, Repo, UUID, Validate}
 
   #####################
   ### API Functions ###
   #####################
-  def list_contacts(args, %{
-        tenant_id: tenant_id,
-        permissions: permissions,
-        workspaces: workspaces
-      }) do
-    case permissions do
-      %{update_workspace: 1} ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id,
-          where: u.type == ^"contact"
-        )
 
-      _ ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id,
-          where: u.type == ^"contact",
-          join: w in assoc(u, :workspaces),
-          where: w.id in ^workspaces
-        )
-    end
-    |> User.filter_users(args)
-    |> User.sort_users(args)
-    |> Repo.all()
-    |> Validate.ecto_read(:users)
+  defp edit_contact(id, session) do
+    from(u in User, where: u.type == ^"contact")
+    |> Query.edit(id, session, :user)
   end
-
-  def list_contacts(_args, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def get_contact(id, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    query =
-      case permissions do
-        %{update_workspace: 1} ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id,
-            where: u.type == ^"contact"
-          )
-
-        _ ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id,
-            where: u.type == ^"contact",
-            join: w in assoc(u, :workspaces),
-            where: w.id in ^workspaces,
-            preload: [workspaces: w]
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:user)
-  end
-
-  def get_contact(_id, _session), do: {:error, Error.message({:user, :authorization})}
 
   def get_contact_by_workspace(id, workspace_id, %{tenant_id: tenant_id}) do
     query =
@@ -81,12 +32,11 @@ defmodule Core.Org.Contact do
 
   def create_contact(
         attrs,
-        %{tenant_id: tenant_id, permissions: %{create_contact: 1}, type: "agent"} = session
+        %{tenant_id: t_id, permissions: %{create_contact: 1}, type: "agent"} = session
       ) do
-    attrs = Map.put(attrs, :tenant_id, tenant_id)
-    user = %User{id: Repo.binary_id(), type: "contact"}
-
-    with {:ok, change} <- User.changeset(user, attrs, session),
+    with {:ok, binary_id} <- UUID.bin_gen(),
+         {:ok, change} <-
+           User.changeset(%User{id: binary_id, tenant_id: t_id, type: "contact"}, attrs, session),
          {:ok, user} <- Repo.put(change) do
       {:ok, user}
     else
@@ -97,11 +47,31 @@ defmodule Core.Org.Contact do
 
   def create_contact(_attrs, _session), do: Error.message({:user, :authorization})
 
-  def update_contact(
+  def update_contact(attrs, session) do
+    attrs
+    |> modify_contact(session)
+  end
+
+  def disable_contact(id, session) do
+    %{status: "disabled", deleted_at: nil, id: id}
+    |> modify_contact(session)
+  end
+
+  def delete_contact(id, session) do
+    %{status: "deleted", deleted_at: Timex.now(), id: id}
+    |> modify_contact(session)
+  end
+
+  def enable_contact(id, session) do
+    %{status: "active", deleted_at: nil, id: id}
+    |> modify_contact(session)
+  end
+
+  defp modify_contact(
         %{id: id} = attrs,
         %{permissions: %{update_contact: 1}, type: "agent"} = session
       ) do
-    with {:ok, user} <- get_contact(id, session),
+    with {:ok, user} <- edit_contact(id, session),
          {:ok, change} <- User.changeset(user, attrs, session),
          {:ok, user} <- Repo.put(change) do
       {:ok, user}
@@ -111,52 +81,7 @@ defmodule Core.Org.Contact do
     end
   end
 
-  def update_contact(_attrs, _session), do: Error.message({:user, :authorization})
-
-  def disable_contact(id, %{permissions: %{update_contact: 1}, type: "agent"} = session) do
-    attrs = %{status: "disabled"}
-
-    with {:ok, user} <- get_contact(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def disable_contact(_id, _session), do: Error.message({:user, :authorization})
-
-  def delete_contact(id, %{permissions: %{update_contact: 1}, type: "agent"} = session) do
-    attrs = %{status: "deleted"}
-
-    with {:ok, user} <- get_contact(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def delete_contact(_id, _session), do: Error.message({:user, :authorization})
-
-  def enable_contact(id, %{permissions: %{update_contact: 1}, type: "agent"} = session) do
-    attrs = %{status: "active"}
-
-    with {:ok, user} <- get_contact(id, session),
-         {:ok, change} <- User.changeset(user, attrs, session),
-         {:ok, user} <- Repo.put(change) do
-      {:ok, user}
-    else
-      error ->
-        error
-    end
-  end
-
-  def enable_contact(_id, _session), do: Error.message({:user, :authorization})
+  defp modify_contact(_attrs, _session), do: Error.message({:user, :authorization})
 
   ##################
   ### Changesets ###
@@ -274,7 +199,7 @@ defmodule Core.Org.Contact do
 
     users_groups
     |> Enum.map(fn %{group_id: group_id} = group_user ->
-      case ContactGroup.validate_update_permissions(group_id, session) do
+      case ContactGroup.edit_contact_group(group_id, session) do
         {:ok, _group} ->
           []
 
@@ -288,7 +213,7 @@ defmodule Core.Org.Contact do
   defp param_groups(param_groups, user_id, workspaces, session) do
     param_groups
     |> Enum.map(fn group_id ->
-      case ContactGroup.validate_update_permissions(group_id, session) do
+      case ContactGroup.edit_contact_group(group_id, session) do
         {:ok, group} ->
           if group.workspace_id in workspaces do
             %UserGroup{

@@ -4,7 +4,7 @@ defmodule Core.Org.User do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{Agent, Contact, Phone, Role, User, UserGroup, UserWorkspace}
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Query, Repo, Validate}
 
   @primary_key {:id, :binary_id, autogenerate: false}
   @foreign_key_type :binary_id
@@ -39,53 +39,15 @@ defmodule Core.Org.User do
   ### API Functions ###
   #####################
 
-  def list_users(args, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    case permissions do
-      %{update_workspace: 1} ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id
-        )
-
-      _ ->
-        from(u in User,
-          where: u.tenant_id == ^tenant_id,
-          join: w in assoc(u, :workspaces),
-          where: w.id in ^workspaces
-        )
-    end
-    |> filter_users(args)
-    |> sort_users(args)
-    |> Repo.all()
-    |> Validate.ecto_read(:users)
+  def list_users(args, session) do
+    from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
+    |> Query.list(args, session, :users)
   end
 
-  def list_users(_args, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def get_user(id, %{tenant_id: tenant_id, permissions: permissions, workspaces: workspaces}) do
-    query =
-      case permissions do
-        %{update_workspace: 1} ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id
-          )
-
-        _ ->
-          from(u in User,
-            where: u.tenant_id == ^tenant_id,
-            where: u.id == ^id,
-            join: w in assoc(u, :workspaces),
-            where: w.id in ^workspaces,
-            preload: [workspaces: w]
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:user)
+  def get_user(args, session) do
+    from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
+    |> Query.get(args, session, :user)
   end
-
-  def get_user(_id, _session), do: {:error, Error.message({:user, :authorization})}
 
   def get_user_by_email(email) when is_binary(email) do
     User
@@ -138,7 +100,7 @@ defmodule Core.Org.User do
     :title,
     :type
   ]
-  @required [:tenant_id, :email, :name, :role_id]
+  @required [:email, :name, :role_id]
 
   def changeset(%User{} = user, attrs, session) do
     user

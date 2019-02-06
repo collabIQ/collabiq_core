@@ -5,50 +5,25 @@ defmodule Core.Org.AgentGroup do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{Agent, Group, UserGroup, Workspace}
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Query, Repo, UUID}
 
   #####################
   ### API Functions ###
   #####################
-  def edit_agent_group(id, %{
-        tenant_id: tenant_id,
-        permissions: permissions,
-        workspaces: workspaces
-      }) do
-    query =
-      case permissions do
-        %{update_agent_group: 1, update_workspace: 1} ->
-          from(g in Group,
-            where: g.id == ^id,
-            where: g.type == ^"agent",
-            where: g.tenant_id == ^tenant_id
-          )
-
-        %{update_agent_group: 1} ->
-          from(g in Group,
-            where: g.id == ^id,
-            where: g.type == ^"agent",
-            where: g.tenant_id == ^tenant_id,
-            where: g.workspace_id in ^workspaces
-          )
-      end
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:group)
+  def edit_agent_group(id, %{permissions: %{update_agent_group: 1}} = session) do
+    from(g in Group, where: g.type == ^"agent")
+    |> Query.edit(id, session, :group)
   end
 
-  def edit_agent_group(_id, _session), do: {:error, Error.message({:user, :authorization})}
-
   def create_agent_group(
-        %{workspace_id: workspace_id} = attrs,
-        %{tenant_id: tenant_id, permissions: %{create_agent_group: 1}, type: "agent"} = session
+        %{workspace_id: w_id} = attrs,
+        %{tenant_id: t_id, permissions: %{create_agent_group: 1}, type: "agent"} = session
       ) do
-    attrs = Map.put(attrs, :tenant_id, tenant_id)
-    group = %Group{id: Repo.binary_id(), type: "agent"}
+    attrs = Map.put(attrs, :tenant_id, t_id)
 
-    with {:ok, _workspace} <- Workspace.get_workspace(workspace_id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
+    with {:ok, binary_id} <- UUID.bin_gen(),
+         {:ok, change} <- Group.changeset(%Group{id: binary_id, type: "agent"}, attrs, session),
+         {:ok, _workspace} <- Workspace.get_workspace(w_id, session),
          {:ok, group} <- Repo.put(change) do
       {:ok, group}
     else
@@ -59,12 +34,30 @@ defmodule Core.Org.AgentGroup do
 
   def create_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
 
-  def update_agent_group(
+  def update_agent_group(attrs, session) do
+    Map.drop(attrs, [:workspace_id])
+    |> modify_agent_group(session)
+  end
+
+  def delete_agent_group(id, session) do
+    %{status: "deleted", deleted_at: Timex.now(), id: id}
+    |> modify_agent_group(session)
+  end
+
+  def disable_agent_group(id, session) do
+    %{status: "disabled", deleted_at: nil, id: id}
+    |> modify_agent_group(session)
+  end
+
+  def enable_agent_group(id, session) do
+    %{status: "active", deleted_at: nil, id: id}
+    |> modify_agent_group(session)
+  end
+
+  def modify_agent_group(
         %{id: id} = attrs,
-        %{permissions: %{update_agent_group: p}, type: "agent"} = session
-      ) when p in [1, 2] do
-    attrs = Map.drop(attrs, [:workspace_id])
-
+        %{permissions: %{update_agent_group: 1}, type: "agent"} = session
+      ) do
     with {:ok, group} <- edit_agent_group(id, session),
          {:ok, change} <- Group.changeset(group, attrs, session),
          {:ok, group} <- Repo.put(change) do
@@ -75,52 +68,7 @@ defmodule Core.Org.AgentGroup do
     end
   end
 
-  def update_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def delete_agent_group(id, %{permissions: %{update_agent_group: p}, type: "agent"} = session) when p in [1, 2] do
-    attrs = %{status: "deleted"}
-
-    with {:ok, group} <- edit_agent_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.put(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def delete_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def disable_agent_group(id, %{permissions: %{update_agent_group: p}, type: "agent"} = session) when p in [1, 2] do
-    attrs = %{status: "disabled"}
-
-    with {:ok, group} <- edit_agent_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.put(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def disable_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
-
-  def enable_agent_group(id, %{permissions: %{update_agent_group: p}, type: "agent"} = session) when p in [1, 2] do
-    attrs = %{status: "active"}
-
-    with {:ok, group} <- edit_agent_group(id, session),
-         {:ok, change} <- Group.changeset(group, attrs, session),
-         {:ok, group} <- Repo.put(change) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
-
-  def enable_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  def modify_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
 
   ##################
   ### Changesets ###
@@ -137,7 +85,14 @@ defmodule Core.Org.AgentGroup do
       |> Enum.flat_map(fn user_id ->
         case Agent.get_agent_by_workspace(user_id, workspace_id, session) do
           {:ok, _} ->
-            [%UserGroup{tenant_id: tenant_id, group_id: group_id, user_id: user_id, workspace_id: workspace_id}]
+            [
+              %UserGroup{
+                tenant_id: tenant_id,
+                group_id: group_id,
+                user_id: user_id,
+                workspace_id: workspace_id
+              }
+            ]
 
           _ ->
             []
@@ -148,16 +103,4 @@ defmodule Core.Org.AgentGroup do
   end
 
   def change_users_groups(changeset, _session), do: changeset
-
-  ########################
-  ### Helper Functions ###
-  ########################
-  def validate_update_permissions(id, %{permissions: %{update_agent_group: p}} = session) when p in [1, 2] do
-    with {:ok, group} <- edit_agent_group(id, session) do
-      {:ok, group}
-    else
-      error ->
-        error
-    end
-  end
 end
