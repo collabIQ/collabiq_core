@@ -33,8 +33,6 @@ defmodule Core.Org do
   defdelegate enable_workspace(id, session), to: Workspace
 
   defdelegate get_tenant(session), to: Tenant
-  defdelegate get_agent(id, session), to: Agent
-  defdelegate get_contact(id, session), to: Contact
   defdelegate get_group(id, session), to: Group
   defdelegate get_role(id, session), to: Role
   defdelegate get_user(id, session), to: User
