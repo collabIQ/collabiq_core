@@ -5,28 +5,23 @@ defmodule Core.Org.Agent do
   import Ecto.Changeset
   import Ecto.Query, warn: false
   alias Core.Org.{AgentGroup, User, UserGroup, UserWorkspace, Workspace}
-  alias Core.{Error, Query, Repo, UUID, Validate}
+  alias Core.{Error, Query, Repo, UUID}
 
   #####################
   ### API Functions ###
   #####################
   defp edit_agent(id, session) do
-    from(u in User, where: u.type == ^"agent")
-    |> Query.edit(id, session, :user)
+    args = %{id: id, filter: [type: "agent"]}
+
+    from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
+    |> Query.edit(args, session, :user)
   end
 
-  def get_agent_by_workspace(id, workspace_id, %{tenant_id: tenant_id}) do
-    query =
-      from(u in User,
-        where: u.tenant_id == ^tenant_id,
-        where: u.id == ^id,
-        join: w in assoc(u, :workspaces),
-        where: w.id == ^workspace_id
-      )
+  def get_agent_by_workspace(id, workspace_id, session) do
+    args = %{id: id, filter: [type: "agent", workspaces: [workspace_id]]}
 
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:user)
+    from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
+    |> Query.get(args, session, :user)
   end
 
   def create_agent(

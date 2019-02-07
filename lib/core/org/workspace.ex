@@ -33,10 +33,10 @@ defmodule Core.Org.Workspace do
     |> Query.list(args, session, :workspaces)
   end
 
-  @spec get_workspace(String.t(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
-  def get_workspace(id, session) do
+  @spec get_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
+  def get_workspace(args, session) do
     from(w in Workspace)
-    |> Query.get(id, session, :workspace)
+    |> Query.get(args, session, :workspace)
   end
 
   def create_workspace(attrs, %{tenant_id: tenant_id, permissions: %{create_workspace: 1}, type: "agent"}) do
@@ -61,20 +61,20 @@ defmodule Core.Org.Workspace do
   end
 
 
-  @spec delete_workspace(String.t(), Session) :: {:ok, %Workspace{}} | {:error, [any()]}
-  def delete_workspace(id, session) do
+  @spec delete_workspace(map(), Session) :: {:ok, %Workspace{}} | {:error, [any()]}
+  def delete_workspace(%{id: id}, session) do
     %{status: "deleted", deleted_at: Timex.now(), id: id}
     |> modify_workspace(session)
   end
 
-  @spec disable_workspace(String.t(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
-  def disable_workspace(id, session) do
+  @spec disable_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
+  def disable_workspace(%{id: id}, session) do
     %{status: "disabled", deleted_at: nil, id: id}
     |> modify_workspace(session)
   end
 
-  @spec enable_workspace(String.t(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
-  def enable_workspace(id, session) do
+  @spec enable_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any()]}
+  def enable_workspace(%{id: id}, session) do
     %{status: "active", deleted_at: nil, id: id}
     |> modify_workspace(session)
   end

@@ -33,9 +33,9 @@ defmodule Core.Org.Group do
     |> Query.list(args, session, :groups)
   end
 
-  def get_group(id, session) do
+  def get_group(args, session) do
     from(g in Group)
-    |> Query.get(id, session, :group)
+    |> Query.get(args, session, :group)
   end
 
   ##################

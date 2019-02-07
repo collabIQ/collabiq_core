@@ -3,7 +3,7 @@ defmodule Core.Org.User do
   use Ecto.Schema
   import Ecto.Changeset
   import Ecto.Query, warn: false
-  alias Core.Org.{Agent, Contact, Phone, Role, User, UserGroup, UserWorkspace}
+  alias Core.Org.{Agent, Contact, Phone, Role, Session, User, UserGroup, UserWorkspace}
   alias Core.{Error, Query, Repo, Validate}
 
   @primary_key {:id, :binary_id, autogenerate: false}
@@ -44,6 +44,7 @@ defmodule Core.Org.User do
     |> Query.list(args, session, :users)
   end
 
+  @spec get_user(map(), Session.t()) :: {:ok, [%User{}, ...]} | {:error, [any(), ...]}
   def get_user(args, session) do
     from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
     |> Query.get(args, session, :user)

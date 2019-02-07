@@ -4,20 +4,21 @@ defmodule Core.Query do
   alias Core.Org.Session
   alias Core.{Error, Repo, Validate}
 
-  @spec edit(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
-  def edit(query, id, %{tenant_id: tenant_id, permissions: _p, workspaces: _w} = session, schema) do
-    from(q in query,
-      where: q.tenant_id == ^tenant_id,
+  @spec edit(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
+  def edit(query, %{id: id} = args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
+    from([q, j] in query,
+      where: q.tenant_id == ^t_id,
       where: q.id == ^id
     )
     |> permissions(session, schema)
+    |> filter(args, schema)
     |> Repo.one()
     |> Validate.ecto_read(schema)
   end
 
   def edit(_query, _id, _session, _schema), do: {:error, Error.message({:user, :authorization})}
 
-  @spec get(Ecto.Query.t(), String.t(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
+  @spec get(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
   def get(query, %{id: id} = args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
       where: q.tenant_id == ^t_id,
@@ -33,9 +34,9 @@ defmodule Core.Query do
 
   @spec list(Ecto.Query.t(), map(), Session.t(), atom()) ::
           {:ok, [any(), ...]} | {:error, [any()]}
-  def list(query, args, %{tenant_id: t, permissions: _p, workspaces: _w} = session, schema) do
+  def list(query, args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
     from(q in query,
-      where: q.tenant_id == ^t
+      where: q.tenant_id == ^t_id
     )
     |> permissions(session, schema)
     |> admin(args, session, schema)
