@@ -52,8 +52,6 @@ defmodule Core.Validate do
   def ecto_read(%Tenant{} = data, _type), do: {:ok, data}
   def ecto_read(%Article{} = data, _type), do: {:ok, data}
   def ecto_read([%Article{} | _] = data, _type), do: {:ok, data}
-  def ecto_read(%Assignee{} = data, _type), do: {:ok, data}
-  def ecto_read([%Assignee{} | _] = data, _type), do: {:ok, data}
   def ecto_read(%Group{} = data, _type), do: {:ok, data}
   def ecto_read([%Group{} | _] = data, _type), do: {:ok, data}
   def ecto_read(%Role{} = data, _type), do: {:ok, data}
