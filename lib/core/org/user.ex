@@ -17,14 +17,18 @@ defmodule Core.Org.User do
     field(:email, :string)
     field(:email_valid, :boolean, default: false)
     field(:language, :string, default: "en")
+    field(:mobile, :string)
     field(:name, :string)
     field(:password, :string, virtual: true)
     field(:password_hash, :string)
+    field(:phone, :string)
     field(:provider, :string, default: "local")
     field(:status, :string, default: "active")
     field(:timezone, :string, default: "America/Chicago")
     field(:title, :string)
     field(:type, :string, default: "active")
+    timestamps(inserted_at: :created_at, type: :utc_datetime)
+    field(:deleted_at, :utc_datetime)
 
     belongs_to(:role, Role)
     embeds_many(:phones, Phone, on_replace: :delete)
@@ -32,7 +36,6 @@ defmodule Core.Org.User do
     has_many(:groups, through: [:users_groups, :group])
     has_many(:users_workspaces, UserWorkspace, on_replace: :delete)
     has_many(:workspaces, through: [:users_workspaces, :workspace])
-    timestamps(inserted_at: :created_at, type: :utc_datetime, usec: false)
   end
 
   #####################
@@ -50,22 +53,11 @@ defmodule Core.Org.User do
     |> Query.get(args, session, :user)
   end
 
-  def get_user_by_email(email) when is_binary(email) do
-    User
-    |> Repo.get_by(email: email)
-    |> Validate.ecto_read(:user)
-  end
-
   def get_login_by_email(email) when is_binary(email) do
-    email = String.downcase(email)
-
-    query =
-      from(u in User,
-        where: u.email == ^email,
-        where: u.status == ^"active"
-      )
-
-    query
+    from(u in User,
+      where: u.email == ^email,
+      where: u.status == ^"active"
+    )
     |> Repo.one()
     |> Validate.ecto_read(:login)
   end

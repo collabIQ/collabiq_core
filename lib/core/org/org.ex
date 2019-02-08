@@ -33,15 +33,15 @@ defmodule Core.Org do
   defdelegate enable_workspace(attrs, session), to: Workspace
 
   defdelegate get_tenant(session), to: Tenant
-  defdelegate get_group(args, session), to: Group
+  defdelegate get_group(attrs, session), to: Group
   defdelegate get_role(id, session), to: Role
-  defdelegate get_user(args, session), to: User
-  defdelegate get_workspace(args, session), to: Workspace
+  defdelegate get_user(attrs, session), to: User
+  defdelegate get_workspace(attrs, session), to: Workspace
 
-  defdelegate list_groups(args, session), to: Group
-  defdelegate list_roles(session), to: Role
-  defdelegate list_users(args, session), to: User
-  defdelegate list_workspaces(args, session), to: Workspace
+  defdelegate list_groups(attrs, session), to: Group
+  defdelegate list_roles(attrs, session), to: Role
+  defdelegate list_users(attrs, session), to: User
+  defdelegate list_workspaces(attrs, session), to: Workspace
 
   defdelegate update_tenant(attrs, context), to: Tenant
   defdelegate update_agent(attrs, session), to: Agent

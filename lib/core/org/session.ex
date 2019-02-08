@@ -24,12 +24,9 @@ defmodule Core.Org.Session do
   #####################
 
   def get_session(id) do
-    query =
-      from(s in Session,
-        where: s.id == ^id
-      )
-
-    query
+    from(s in Session,
+      where: s.id == ^id
+    )
     |> Repo.one()
     |> Validate.ecto_read(:session)
   end
@@ -87,13 +84,13 @@ defmodule Core.Org.Session do
   def format_session(%Session{} = session) do
     {:ok, %{
         id: session.id,
-        tenant_id: session.tenant_id,
-        groups: Enum.map(session.user.groups, &(&1.id)),
+        t_id: session.tenant_id,
+        group: Enum.map(session.user.groups, &(&1.id)),
         name: session.user.name,
-        permissions: Map.from_struct(session.user.role.permissions),
+        perms: Map.from_struct(session.user.role.permissions),
         type: session.user.type,
-        user_id: session.user_id,
-        workspaces: Enum.map(session.user.workspaces, &(&1.id))
+        u_id: session.user_id,
+        ws: Enum.map(session.user.workspaces, &(&1.id))
       }
     }
   end

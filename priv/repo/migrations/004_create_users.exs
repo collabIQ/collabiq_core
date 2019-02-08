@@ -12,15 +12,15 @@ defmodule Core.Repo.Migrations.CreateUsers do
       add :email, :string
       add :email_valid, :boolean
       add :language, :string
+      add :mobile, :string
       add :name, :string
       add :password_hash, :string
-      add :phones, {:array, :map}, default: []
+      add :phone, :string
       add :provider, :string
       add :status, :string, null: false
       add :timezone, :string
       add :title, :string
       add :type, :string, null: false
-
       timestamps([inserted_at: :created_at, type: :utc_datetime])
       add :deleted_at, :utc_datetime
     end

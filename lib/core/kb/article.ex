@@ -49,7 +49,7 @@ defmodule Core.Kb.Article do
     end
   end
 
-  def create_article(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  def create_article(_attrs, _session), do: {:error, Error.message({:user, :auth})}
 
   ##################
   ### Changesets ###

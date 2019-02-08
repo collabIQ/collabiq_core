@@ -27,7 +27,7 @@ defmodule Core.Org.Contact do
 
   def create_contact(
         attrs,
-        %{tenant_id: t_id, permissions: %{create_contact: 1}, type: "agent"} = session
+        %{t_id: t_id, perms: %{create_contact: 1}, type: "agent"} = session
       ) do
     with {:ok, binary_id} <- UUID.bin_gen(),
          {:ok, change} <-
@@ -40,7 +40,7 @@ defmodule Core.Org.Contact do
     end
   end
 
-  def create_contact(_attrs, _session), do: Error.message({:user, :authorization})
+  def create_contact(_attrs, _session), do: Error.message({:user, :auth})
 
   def update_contact(attrs, session) do
     attrs
@@ -64,7 +64,7 @@ defmodule Core.Org.Contact do
 
   defp modify_contact(
         %{id: id} = attrs,
-        %{permissions: %{update_contact: 1}, type: "agent"} = session
+        %{perms: %{update_contact: 1}, type: "agent"} = session
       ) do
     with {:ok, user} <- edit_contact(id, session),
          {:ok, change} <- User.changeset(user, attrs, session),
@@ -76,7 +76,7 @@ defmodule Core.Org.Contact do
     end
   end
 
-  defp modify_contact(_attrs, _session), do: Error.message({:user, :authorization})
+  defp modify_contact(_attrs, _session), do: Error.message({:user, :auth})
 
   ##################
   ### Changesets ###
@@ -87,7 +87,7 @@ defmodule Core.Org.Contact do
           data: %{id: user_id, users_workspaces: users_workspaces},
           params: %{"workspaces" => [_ | _] = param_workspaces}
         } = changeset,
-        %{tenant_id: tenant_id, permissions: %{update_workspace: p}} = session
+        %{t_id: t_id, perms: %{update_workspace: p}} = session
       )
       when p in [1, 2] do
     workspaces = build_workspaces(users_workspaces, param_workspaces, session)
@@ -101,7 +101,7 @@ defmodule Core.Org.Contact do
         users_workspaces =
           workspaces
           |> Enum.map(fn workspace_id ->
-            %UserWorkspace{tenant_id: tenant_id, user_id: user_id, workspace_id: workspace_id}
+            %UserWorkspace{tenant_id: t_id, user_id: user_id, workspace_id: workspace_id}
           end)
 
         changeset
@@ -155,7 +155,7 @@ defmodule Core.Org.Contact do
           data: %{id: user_id, users_groups: users_groups},
           params: %{"groups" => [_ | _] = param_groups}
         } = changeset,
-        %{permissions: %{update_contact_group: p}} = session
+        %{perms: %{u_cg: p}} = session
       )
       when p in [1, 2] do
     applied = apply_changes(changeset)

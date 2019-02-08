@@ -7,11 +7,13 @@ defmodule Core.Repo.Migrations.CreateRoles do
       add :tenant_id, references(:tenants, on_delete: :delete_all, type: :binary_id), null: false
       add :name, :string, null: false
       add :permissions, :map, null: false
+      add :type, :string
 
       timestamps([inserted_at: :created_at, type: :utc_datetime])
     end
 
     create unique_index(:roles, [:tenant_id, :name])
     create index(:roles, [:tenant_id])
+    create index(:roles, ["(lower(name))"], name: :roles_name_index)
   end
 end

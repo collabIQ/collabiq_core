@@ -6,47 +6,60 @@ defmodule Core.Org.Permission do
 
   @primary_key false
   embedded_schema do
-    # 0 = no, 1 = yes
-    field(:create_article, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:create_agent, :integer, default: 0)
-    field(:create_agent_group, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:create_contact, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:create_contact_group, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:create_workspace, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:publish_article, :integer, default: 0)
-    field(:update_tenant, :integer, default: 0)
-    field(:update_article, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:update_agent, :integer, default: 0)
-    # 0 = no, 1 = all, 2 = yes for groups where the user is a member
-    field(:update_agent_group, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:update_contact, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:update_contact_group, :integer, default: 0)
-    # 0 = no, 1 = yes
-    field(:update_role, :integer, default: 0)
-    # 0 = no, 1 = yes all, 2 = yes for workspaces where the user is a member
-    field(:update_workspace, :integer, default: 0)
+    # creat article
+    field(:c_art, :integer, default: 0)
+    # create agent
+    field(:c_agent, :integer, default: 0)
+    # create agent group
+    field(:c_ag, :integer, default: 0)
+    # create contact
+    field(:c_con, :integer, default: 0)
+    # create contact group
+    field(:c_cg, :integer, default: 0)
+    # create workspace
+    field(:c_ws, :integer, default: 0)
+    # publish article
+    field(:pub_art, :integer, default: 0)
+    # update tenant
+    field(:u_ten, :integer, default: 0)
+    # update article
+    field(:u_art, :integer, default: 0)
+    # update agent
+    field(:u_agent, :integer, default: 0)
+    # update agent group
+    field(:u_ag, :integer, default: 0)
+    # update contact
+    field(:u_con, :integer, default: 0)
+    # update contact group
+    field(:u_cg, :integer, default: 0)
+    # manage roles
+    field(:m_role, :integer, default: 0)
+    # update workspace
+    field(:u_ws, :integer, default: 0)
+    # create tag
+    field(:c_tag, :integer, default: 0)
+    # update tag
+    field(:u_tag, :integer, default: 0)
   end
 
   @required [
-    :create_article,
-    :create_group,
-    :create_user,
-    :create_workspace,
-    :publish_article,
-    :update_article,
-    :update_tenant,
-    :update_group,
-    :update_role,
-    :update_user,
-    :update_workspace
+    :c_art,
+    :c_ag,
+    :c_agent,
+    :c_cg,
+    :c_con,
+    :c_ws,
+    :pub_art,
+    :u_ag,
+    :u_agent,
+    :u_cg,
+    :u_con,
+    :u_art,
+    :u_ten,
+    :m_role,
+    :u_ws,
+    :c_tag,
+    :u_tag
   ]
 
   def changeset(%Permission{} = permission, attrs) do

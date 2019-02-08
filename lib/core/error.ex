@@ -49,7 +49,7 @@ defmodule Core.Error do
 
   def error_message(message) do
     case message do
-      :authorization -> dgettext("errors", "not authorized")
+      :auth -> dgettext("errors", "not authorized")
       :create -> dgettext("errors", "could not be created")
       :delete -> dgettext("errors", "could not be deleted")
       :disable -> dgettext("errors", "could not be disabled")

@@ -28,14 +28,14 @@ defmodule Core.Org.Group do
   ### API Functions ###
   #####################
 
-  def list_groups(args, session) do
+  def list_groups(args, sess) do
     from(g in Group)
-    |> Query.list(args, session, :groups)
+    |> Query.list(args, sess, :groups)
   end
 
-  def get_group(args, session) do
+  def get_group(args, sess) do
     from(g in Group)
-    |> Query.get(args, session, :group)
+    |> Query.get(args, sess, :group)
   end
 
   ##################
@@ -45,15 +45,15 @@ defmodule Core.Org.Group do
   @optional [:description, :email, :phone, :status]
   @required [:tenant_id, :name, :workspace_id]
 
-  @spec changeset(%Group{}, map(), Session.t()) :: {:ok, Ecto.Changeset.t()} | {:error, [any()]}
+  @spec changeset(%Group{}, map(), Session.t()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
 
-  def changeset(%Group{} = group, attrs, session) do
+  def changeset(%Group{} = group, attrs, sess) do
     group
     |> Repo.preload([:users_groups])
     |> cast(attrs, @optional ++ @required)
     |> validate_required(@required)
     |> validate_inclusion(:status, @attrs_status)
-    |> change_users_groups(session)
+    |> change_users_groups(sess)
     |> foreign_key_constraint(:tenant_id)
     |> foreign_key_constraint(:workspace_id)
     |> Validate.change()
@@ -61,16 +61,16 @@ defmodule Core.Org.Group do
 
   def change_users_groups(
         %{data: %{type: type}, params: %{"users" => _users}} = changeset,
-        session
+        sess
       ) do
     case type do
       "agent" ->
-        AgentGroup.change_users_groups(changeset, session)
+        AgentGroup.change_users_groups(changeset, sess)
 
       "contact" ->
-        ContactGroup.change_users_groups(changeset, session)
+        ContactGroup.change_users_groups(changeset, sess)
     end
   end
 
-  def change_users_groups(changeset, _session), do: changeset
+  def change_users_groups(changeset, _sess), do: changeset
 end

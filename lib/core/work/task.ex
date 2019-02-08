@@ -55,7 +55,7 @@ defmodule Core.Work.Task do
     |> Validate.ecto_read(:groups)
   end
 
-  def list_groups(_args, _session), do: {:error, Error.message({:user, :authorization})}
+  def list_groups(_args, _session), do: {:error, Error.message({:user, :auth})}
 
   def get_group(id, %{tenant_id: tenant_id, groups: groups, permissions: permissions, workspaces: workspaces}) do
     query =
@@ -86,7 +86,7 @@ defmodule Core.Work.Task do
     |> Validate.ecto_read(:group)
   end
 
-  def get_group(_id, _session), do: {:error, Error.message({:user, :authorization})}
+  def get_group(_id, _session), do: {:error, Error.message({:user, :auth})}
 
   ##################
   ### Changesets ###

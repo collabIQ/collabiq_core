@@ -2,7 +2,7 @@ defmodule Core.Validate do
   @moduledoc false
   alias Core.Error
   alias Core.Kb.Article
-  alias Core.Org.{Assignee, Group, Role, Session, Tenant, User, Workspace}
+  alias Core.Org.{Group, Role, Session, Tenant, User, Workspace}
 
   def binary_id(id) when is_binary(id) do
     regex = ~r/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
@@ -45,15 +45,13 @@ defmodule Core.Validate do
       true ->
         :ok
       _ ->
-        {:error, Error.message({:user, :authorization})}
+        {:error, Error.message({:user, :auth})}
     end
   end
 
   def ecto_read(%Tenant{} = data, _type), do: {:ok, data}
   def ecto_read(%Article{} = data, _type), do: {:ok, data}
   def ecto_read([%Article{} | _] = data, _type), do: {:ok, data}
-  def ecto_read(%Assignee{} = data, _type), do: {:ok, data}
-  def ecto_read([%Assignee{} | _] = data, _type), do: {:ok, data}
   def ecto_read(%Group{} = data, _type), do: {:ok, data}
   def ecto_read([%Group{} | _] = data, _type), do: {:ok, data}
   def ecto_read(%Role{} = data, _type), do: {:ok, data}

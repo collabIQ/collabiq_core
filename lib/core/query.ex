@@ -5,50 +5,53 @@ defmodule Core.Query do
   alias Core.{Error, Repo, Validate}
 
   @spec edit(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
-  def edit(query, %{id: id} = args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
+  def edit(query, %{id: id} = args, %{t_id: t_id, perms: _p, ws: _w} = sess, schema) do
     from([q, j] in query,
       where: q.tenant_id == ^t_id,
       where: q.id == ^id
     )
-    |> permissions(session, schema)
+    |> permissions(sess, schema)
     |> filter(args, schema)
     |> Repo.one()
     |> Validate.ecto_read(schema)
   end
 
-  def edit(_query, _id, _session, _schema), do: {:error, Error.message({:user, :authorization})}
+  def edit(_query, _id, _sess, _schema), do: {:error, Error.message({:user, :auth})}
 
   @spec get(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
-  def get(query, %{id: id} = args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
+  def get(query, %{id: id} = args, %{t_id: t_id, perms: _p, ws: _w} = sess, schema) do
     from(q in query,
       where: q.tenant_id == ^t_id,
       where: q.id == ^id
     )
-    |> permissions(session, schema)
+    |> permissions(sess, schema)
     |> filter(args, schema)
     |> Repo.single()
     |> Validate.ecto_read(schema)
   end
 
-  def get(_query, _id, _session, _schema), do: {:error, Error.message({:user, :authorization})}
+  def get(_query, _id, _sess, _schema), do: {:error, Error.message({:user, :auth})}
 
   @spec list(Ecto.Query.t(), map(), Session.t(), atom()) ::
           {:ok, [any(), ...]} | {:error, [any()]}
-  def list(query, args, %{tenant_id: t_id, permissions: _p, workspaces: _w} = session, schema) do
+  def list(query, args, %{t_id: t_id, perms: _p, ws: _w} = sess, schema) do
     from(q in query,
       where: q.tenant_id == ^t_id
     )
-    |> permissions(session, schema)
-    |> admin(args, session, schema)
+    |> permissions(sess, schema)
+    |> admin(args, sess, schema)
     |> filter(args, schema)
     |> sort(args, schema)
     |> Repo.full()
     |> Validate.ecto_read(schema)
   end
 
-  def list(_query, _args, _session, _schema), do: {:error, Error.message({:user, :authorization})}
+  def list(_query, _args, _sess, _schema), do: {:error, Error.message({:user, :auth})}
 
-  def admin(query, args, %{workspaces: workspaces}, schema) do
+  def admin(query, _args, _sess, schema) when schema in [:role, :roles, :tenants] do
+    query
+  end
+  def admin(query, args, %{ws: ws}, schema) do
     id =
       case schema do
         _ when schema in [:user, :users, :workspace, :workspaces] ->
@@ -65,18 +68,21 @@ defmodule Core.Query do
       _ when schema in [:user, :users] ->
         from(q in query,
           join: w in assoc(q, :workspaces),
-          where: field(w, ^id) in ^workspaces,
+          where: field(w, ^id) in ^ws,
           preload: [workspaces: w]
         )
 
       _ ->
         from(q in query,
-          where: field(q, ^id) in ^workspaces
+          where: field(q, ^id) in ^ws
         )
     end
   end
 
-  def permissions(query, %{permissions: permissions, workspaces: workspaces}, schema) do
+  def permissions(query, _sess, schema) when schema in [:role, :roles, :tenants] do
+    query
+  end
+  def permissions(query, %{perms: perms, ws: ws}, schema) do
     id =
       case schema do
         _ when schema in [:user, :users, :workspace, :workspaces] ->
@@ -86,18 +92,18 @@ defmodule Core.Query do
           :workspace_id
       end
 
-    case permissions do
-      %{update_workspace: 1} ->
+    case perms do
+      %{u_ws: 1} ->
         query
 
       _ when schema in [:user, :users] ->
         from([q, w] in query,
-          where: field(w, ^id) in ^workspaces
+          where: field(w, ^id) in ^ws
         )
 
       _ ->
         from(q in query,
-          where: field(q, ^id) in ^workspaces
+          where: field(q, ^id) in ^ws
         )
     end
   end
@@ -129,7 +135,7 @@ defmodule Core.Query do
       {:status, _}, query ->
         query
 
-      {:type, [_ | _] = type}, query when schema in [:groups, :users] ->
+      {:type, [_ | _] = type}, query when schema in [:groups, :roles, :users] ->
         from(q in query,
           where: q.type in ^type
         )
@@ -210,7 +216,7 @@ defmodule Core.Query do
             )
         end
 
-      "type" when schema in [:groups] ->
+      "type" when schema in [:groups, :roles] ->
         case order do
           "desc" ->
             from(q in query,
@@ -251,7 +257,7 @@ defmodule Core.Query do
     )
   end
 
-  def sort(query, _args, schema) when schema in [:groups, :workspaces] do
+  def sort(query, _args, schema) when schema in [:groups, :roles, :workspaces] do
     from(q in query,
       order_by: fragment("lower(name) ASC")
     )

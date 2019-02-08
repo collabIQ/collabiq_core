@@ -22,7 +22,7 @@ defmodule Core.Org.Tenant do
   #####################
 
   @spec get_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def get_tenant(%{tenant_id: tenant_id, permissions: %{update_tenant: 1}, type: "agent"}) do
+  def get_tenant(%{tenant_id: tenant_id, perms: %{u_ten: 1}, type: "agent"}) do
     query =
       from(t in Tenant,
         where: t.id == ^tenant_id
@@ -33,7 +33,7 @@ defmodule Core.Org.Tenant do
     |> Validate.ecto_read(:tenant)
   end
 
-  def get_tenant(_session), do: Error.message({:user, :authorization})
+  def get_tenant(_session), do: Error.message({:user, :auth})
 
   def create_tenant(attrs) do
     with {:ok, change} <- changeset(%Tenant{}, attrs),
@@ -46,7 +46,7 @@ defmodule Core.Org.Tenant do
   end
 
   @spec update_tenant(map(), Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def update_tenant(attrs, %{permissions: %{update_tenant: 1}, type: "agent"} = session) do
+  def update_tenant(attrs, %{perms: %{u_ten: 1}, type: "agent"} = session) do
     with {:ok, tenant} <- get_tenant(session),
          {:ok, change} <- changeset(tenant, attrs),
          {:ok, tenant} <- Repo.put(change) do
@@ -57,10 +57,10 @@ defmodule Core.Org.Tenant do
     end
   end
 
-  def update_tenant(_attrs, _session), do: Error.message({:user, :authorization})
+  def update_tenant(_attrs, _session), do: Error.message({:user, :auth})
 
   @spec delete_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def delete_tenant(%{permissions: %{update_tenant: 1}, type: "agent"} = session) do
+  def delete_tenant(%{perms: %{u_ten: 1}, type: "agent"} = session) do
     attrs = %{status: "deleted", deleted_at: Timex.now()}
 
     with {:ok, tenant} <- get_tenant(session),
@@ -73,10 +73,10 @@ defmodule Core.Org.Tenant do
     end
   end
 
-  def delete_tenant(_session), do: Error.message({:user, :authorization})
+  def delete_tenant(_session), do: Error.message({:user, :auth})
 
   @spec enable_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def enable_tenant(%{permissions: %{update_tenant: 1}, type: "agent"} = session) do
+  def enable_tenant(%{perms: %{u_ten: 1}, type: "agent"} = session) do
     attrs = %{status: "active", deleted_at: nil}
 
     with {:ok, tenant} <- get_tenant(session),
@@ -89,7 +89,7 @@ defmodule Core.Org.Tenant do
     end
   end
 
-  def enable_tenant(_session), do: Error.message({:user, :authorization})
+  def enable_tenant(_session), do: Error.message({:user, :auth})
 
   ##################
   ### Changesets ###

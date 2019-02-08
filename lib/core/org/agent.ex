@@ -26,7 +26,7 @@ defmodule Core.Org.Agent do
 
   def create_agent(
         attrs,
-        %{tenant_id: t_id, permissions: %{create_agent: 1}, type: "agent"} = session
+        %{tenant_id: t_id, perms: %{create_agent: 1}, type: "agent"} = session
       ) do
 
     with {:ok, binary_id} <- UUID.bin_gen(),
@@ -39,7 +39,7 @@ defmodule Core.Org.Agent do
     end
   end
 
-  def create_agent(_attrs, _session), do: Error.message({:user, :authorization})
+  def create_agent(_attrs, _session), do: Error.message({:user, :auth})
 
   def update_agent(attrs, session) do
     attrs
@@ -61,7 +61,7 @@ defmodule Core.Org.Agent do
     |> modify_agent(session)
   end
 
-  defp modify_agent(%{id: id} = attrs, %{permissions: %{update_agent: 1}, type: "agent"} = session) do
+  defp modify_agent(%{id: id} = attrs, %{perms: %{update_agent: 1}, type: "agent"} = session) do
     with {:ok, user} <- edit_agent(id, session),
          {:ok, change} <- User.changeset(user, attrs, session),
          {:ok, user} <- Repo.put(change) do
@@ -72,7 +72,7 @@ defmodule Core.Org.Agent do
     end
   end
 
-  defp modify_agent(_attrs, _session), do: Error.message({:user, :authorization})
+  defp modify_agent(_attrs, _session), do: Error.message({:user, :auth})
 
   ##################
   ### Changesets ###
@@ -83,7 +83,7 @@ defmodule Core.Org.Agent do
           data: %{id: user_id, users_workspaces: users_workspaces},
           params: %{"workspaces" => [_ | _] = param_workspaces}
         } = changeset,
-        %{tenant_id: tenant_id, permissions: %{update_workspace: p}} = session
+        %{tenant_id: tenant_id, perms: %{update_workspace: p}} = session
       )
       when p in [1, 2] do
     workspaces = build_workspaces(users_workspaces, param_workspaces, session)
@@ -144,7 +144,7 @@ defmodule Core.Org.Agent do
           data: %{id: user_id, users_groups: users_groups},
           params: %{"groups" => [_ | _] = param_groups}
         } = changeset,
-        %{permissions: %{update_contact_group: p}} = session
+        %{perms: %{u_cg: p}} = session
       )
       when p in [1, 2] do
     applied = apply_changes(changeset)

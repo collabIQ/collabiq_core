@@ -10,19 +10,18 @@ defmodule Core.Org.AgentGroup do
   #####################
   ### API Functions ###
   #####################
-  def edit_agent_group(id, %{permissions: %{update_agent_group: 1}} = session) do
+  def edit_agent_group(id, %{perms: %{u_ag: 1}} = session) do
     from(g in Group, where: g.type == ^"agent")
     |> Query.edit(id, session, :group)
   end
 
   def create_agent_group(
         %{workspace_id: w_id} = attrs,
-        %{tenant_id: t_id, permissions: %{create_agent_group: 1}, type: "agent"} = session
+        %{t_id: t_id, perms: %{c_ag: 1}, type: "agent"} = session
       ) do
-    attrs = Map.put(attrs, :tenant_id, t_id)
 
     with {:ok, binary_id} <- UUID.bin_gen(),
-         {:ok, change} <- Group.changeset(%Group{id: binary_id, type: "agent"}, attrs, session),
+         {:ok, change} <- Group.changeset(%Group{id: binary_id, tenant_id: t_id, type: "agent"}, attrs, session),
          {:ok, _workspace} <- Workspace.get_workspace(w_id, session),
          {:ok, group} <- Repo.put(change) do
       {:ok, group}
@@ -32,7 +31,7 @@ defmodule Core.Org.AgentGroup do
     end
   end
 
-  def create_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  def create_agent_group(_attrs, _session), do: {:error, Error.message({:user, :auth})}
 
   def update_agent_group(attrs, session) do
     Map.drop(attrs, [:workspace_id])
@@ -56,7 +55,7 @@ defmodule Core.Org.AgentGroup do
 
   def modify_agent_group(
         %{id: id} = attrs,
-        %{permissions: %{update_agent_group: 1}, type: "agent"} = session
+        %{perms: %{u_ag: 1}, type: "agent"} = session
       ) do
     with {:ok, group} <- edit_agent_group(id, session),
          {:ok, change} <- Group.changeset(group, attrs, session),
@@ -68,7 +67,7 @@ defmodule Core.Org.AgentGroup do
     end
   end
 
-  def modify_agent_group(_attrs, _session), do: {:error, Error.message({:user, :authorization})}
+  def modify_agent_group(_attrs, _session), do: {:error, Error.message({:user, :auth})}
 
   ##################
   ### Changesets ###
@@ -76,7 +75,7 @@ defmodule Core.Org.AgentGroup do
 
   def change_users_groups(
         %{data: %{id: group_id}, params: %{"users" => users} = params} = changeset,
-        %{tenant_id: tenant_id, permissions: %{update_agent: 1}} = session
+        %{t_id: t_id, perms: %{update_agent: 1}} = session
       ) do
     workspace_id = changeset.data.workspace_id || params["workspace_id"]
 
@@ -87,7 +86,7 @@ defmodule Core.Org.AgentGroup do
           {:ok, _} ->
             [
               %UserGroup{
-                tenant_id: tenant_id,
+                tenant_id: t_id,
                 group_id: group_id,
                 user_id: user_id,
                 workspace_id: workspace_id
