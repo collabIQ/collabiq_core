@@ -52,7 +52,7 @@ defmodule Core.Work.Task do
     |> filter_groups(args)
     |> sort_groups(args)
     |> Repo.all()
-    |> Validate.ecto_read(:groups)
+    |> Repo.validate_read(:groups)
   end
 
   def list_groups(_args, _session), do: {:error, Error.message({:user, :auth})}
@@ -83,7 +83,7 @@ defmodule Core.Work.Task do
 
     query
     |> Repo.one()
-    |> Validate.ecto_read(:group)
+    |> Repo.validate_read(:group)
   end
 
   def get_group(_id, _session), do: {:error, Error.message({:user, :auth})}

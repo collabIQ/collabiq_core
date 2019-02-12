@@ -28,14 +28,26 @@ defmodule Core.Org.Group do
   ### API Functions ###
   #####################
 
-  def list_groups(args, sess) do
-    from(g in Group)
-    |> Query.list(args, sess, :groups)
+  def list_groups(args, %{t_id: t_id} = sess) do
+    from(g in Group,
+      where: g.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :group)
+    |> Query.admin(args, sess, :group)
+    |> Query.filter(args, :group)
+    |> Query.sort(args, :group)
+    |> Repo.full()
+    |> Repo.validate_read(:groups)
   end
 
-  def get_group(args, sess) do
-    from(g in Group)
-    |> Query.get(args, sess, :group)
+  def get_group(args, %{t_id: t_id} = sess) do
+    from(g in Group,
+      where: g.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :group)
+    |> Query.filter(args, :group)
+    |> Repo.single()
+    |> Repo.validate_read(:group)
   end
 
   ##################

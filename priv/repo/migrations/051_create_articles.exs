@@ -7,6 +7,7 @@ defmodule Core.Repo.Migrations.CreateArticles do
       add :tenant_id, references(:tenants, on_delete: :delete_all, type: :binary_id), null: false
       add :workspace_id, references(:workspaces, on_delete: :delete_all, type: :binary_id), null: false
       add :content, :text, null: false
+      add :content_type, :string
       add :name, :string, null: false
       add :pinned, :boolean
       add :status, :string

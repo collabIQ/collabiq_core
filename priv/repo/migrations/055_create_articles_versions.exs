@@ -7,6 +7,7 @@ defmodule Core.Repo.Migrations.CreateArticlesVersions do
       add :tenant_id, references(:tenants, on_delete: :delete_all, type: :binary_id), null: false
       add :user_id, references(:tenants, on_delete: :delete_all, type: :binary_id), null: false
       add :content, :text, null: false
+      add :content_type, :string
       add :status, :string
 
       timestamps([inserted_at: :created_at, type: :utc_datetime])

@@ -28,7 +28,7 @@ defmodule Core.Org.Session do
       where: s.id == ^id
     )
     |> Repo.one()
-    |> Validate.ecto_read(:session)
+    |> Repo.validate_read(:session)
   end
 
   def get_me(id) do

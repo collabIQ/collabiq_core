@@ -31,7 +31,6 @@ defmodule Core.Org.User do
     field(:deleted_at, :utc_datetime)
 
     belongs_to(:role, Role)
-    embeds_many(:phones, Phone, on_replace: :delete)
     has_many(:users_groups, UserGroup, on_replace: :delete)
     has_many(:groups, through: [:users_groups, :group])
     has_many(:users_workspaces, UserWorkspace, on_replace: :delete)
@@ -59,7 +58,7 @@ defmodule Core.Org.User do
       where: u.status == ^"active"
     )
     |> Repo.one()
-    |> Validate.ecto_read(:login)
+    |> Repo.validate_read(:login)
   end
 
   def get_user_by_workspace(id, workspace_id, %{tenant_id: tenant_id}) do
@@ -73,7 +72,7 @@ defmodule Core.Org.User do
 
     query
     |> Repo.one()
-    |> Validate.ecto_read(:user)
+    |> Repo.validate_read(:user)
   end
 
   ##################
@@ -103,7 +102,6 @@ defmodule Core.Org.User do
     |> validate_format(:email, ~r/@.*?\./)
     |> validate_length(:password, min: 8)
     |> change_password()
-    |> change_phones()
     |> change_users_workspaces(session)
     |> change_users_groups(session)
     |> validate_workspace_min()
@@ -118,30 +116,6 @@ defmodule Core.Org.User do
   end
 
   def change_password(changeset), do: changeset
-
-  def change_phones(%{params: %{"phones" => phones}} = changeset) do
-    phones =
-      Enum.map(phones, fn attrs ->
-        case Phone.changeset(%Phone{}, attrs) do
-          %{valid?: true} = phone_changeset ->
-            apply_changes(phone_changeset)
-          _ ->
-            []
-        end
-      end)
-      |> List.flatten()
-
-    case phones do
-      [] ->
-        changeset
-
-      _ ->
-        changeset
-        |> put_embed(:phones, phones)
-    end
-  end
-
-  def change_phones(changeset), do: changeset
 
   def change_users_workspaces(%{data: %{type: type}} = changeset, session) do
     case type do

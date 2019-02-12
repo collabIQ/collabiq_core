@@ -28,26 +28,43 @@ defmodule Core.Org.Workspace do
   ### API Functions ###
   #####################
   @spec list_workspaces(map(), Session.t()) :: {:ok, [%Workspace{}, ...]} | {:error, [any()]}
-  def list_workspaces(args, sess) do
-    from(w in Workspace)
-    |> Query.list(args, sess, :workspaces)
+  def list_workspaces(args, %{t_id: t_id} = sess) do
+    from(w in Workspace,
+      where: w.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :workspace)
+    |> Query.admin(args, sess, :workspace)
+    |> Query.filter(args, :workspace)
+    |> Query.sort(args, :workspace)
+    |> Repo.full()
+    |> Repo.validate_read(:workspaces)
   end
 
   @spec get_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
-  def get_workspace(args, sess) do
-    from(w in Workspace)
-    |> Query.get(args, sess, :workspace)
+  def get_workspace(args, %{t_id: t_id} = sess) do
+    from(w in Workspace,
+      where: w.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :workspace)
+    |> Query.filter(args, :workspace)
+    |> Repo.single()
+    |> Repo.validate_read(:workspace)
   end
 
   @spec edit_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
-  def edit_workspace(args, sess) do
-    from(w in Workspace)
-    |> Query.edit(args, sess, :workspace)
+  def edit_workspace(args, %{t_id: t_id} = sess) do
+    from(w in Workspace,
+      where: w.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :workspace)
+    |> Query.filter(args, :workspace)
+    |> Repo.one()
+    |> Repo.validate_read(:workspace)
   end
 
   @spec create_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
   def create_workspace(attrs, %{t_id: t_id, perms: %{c_ws: 1}, type: "agent"}) do
-    with {:ok, binary_id} <- UUID.bin_gen(),
+    with {:ok, binary_id} <- UUID.string_gen(),
          {:ok, change} <- changeset(%Workspace{id: binary_id, tenant_id: t_id}, attrs),
          {:ok, workspace} <- Repo.put(change) do
       {:ok, workspace}
@@ -86,7 +103,7 @@ defmodule Core.Org.Workspace do
   @spec modify_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
   def modify_workspace(%{id: id} = attrs, %{perms: %{u_ws: v}, type: "agent"} = sess)
       when v in [1, 2] do
-    with {:ok, workspace} <- get_workspace(id, sess),
+    with {:ok, workspace} <- edit_workspace(id, sess),
          {:ok, change} <- changeset(workspace, attrs),
          {:ok, workspace} <- Repo.put(change) do
       {:ok, workspace}

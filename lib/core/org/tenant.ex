@@ -22,15 +22,12 @@ defmodule Core.Org.Tenant do
   #####################
 
   @spec get_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def get_tenant(%{tenant_id: tenant_id, perms: %{u_ten: 1}, type: "agent"}) do
-    query =
-      from(t in Tenant,
-        where: t.id == ^tenant_id
-      )
-
-    query
-    |> Repo.one()
-    |> Validate.ecto_read(:tenant)
+  def get_tenant(%{t_id: t_id, perms: %{u_ten: 1}, type: "agent"}) do
+    from(t in Tenant,
+      where: t.id == ^t_id
+    )
+    |> Repo.single()
+    |> Repo.validate_read(:tenant)
   end
 
   def get_tenant(_session), do: Error.message({:user, :auth})

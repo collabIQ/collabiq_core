@@ -17,6 +17,18 @@ defmodule Core.UUID do
     end
   end
 
+  def string_gen!() do
+    Ecto.UUID.bingenerate()
+    |> Ecto.UUID.load()
+    |> case do
+      {:ok, uuid_string} ->
+        uuid_string
+
+      _ ->
+        {:error, Error.message({})}
+    end
+  end
+
   def bin_to_string(bin) do
     bin
     |> Ecto.UUID.load()

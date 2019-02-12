@@ -20,7 +20,7 @@ defmodule Core.Org.Role do
   ### API Functions ###
   #####################
 
-  def list_roles(attrs, %{perms: %{u_role: 1}, type: "agent"} = sess) do
+  def list_roles(attrs, %{perms: %{m_role: 1}, type: "agent"} = sess) do
     from(r in Role)
     |> Query.list(attrs, sess, :roles)
   end
@@ -32,7 +32,7 @@ defmodule Core.Org.Role do
     |> Query.edit(attrs, sess, :role)
   end
 
-  def get_role(attrs, %{perms: %{u_role: 1}, type: "agent"} = sess) do
+  def get_role(attrs, %{perms: %{m_role: 1}, type: "agent"} = sess) do
     from(r in Role)
     |> Query.get(attrs, sess, :role)
   end
@@ -40,7 +40,7 @@ defmodule Core.Org.Role do
   def get_role(_attrs, _sess), do: {:error, Error.message({:user, :auth})}
 
   def create_role(attrs, %{t_id: t_id, perms: %{m_role: 1}, type: "agent"}) do
-    with {:ok, binary_id} <- UUID.bin_gen(),
+    with {:ok, binary_id} <- UUID.string_gen(),
          {:ok, change} <- changeset(%Role{id: binary_id, tenant_id: t_id}, attrs),
          {:ok, role} <- Repo.put(change) do
       {:ok, role}
@@ -62,7 +62,7 @@ defmodule Core.Org.Role do
     |> modify_role(sess)
   end
 
-  def modify_role(attrs, %{perms: %{u_role: 1}, type: "agent"} = sess) do
+  def modify_role(attrs, %{perms: %{m_role: 1}, type: "agent"} = sess) do
     with {:ok, role} <- edit_role(attrs, sess),
          {:ok, change} <- changeset(role, attrs),
          {:ok, role} <- Repo.destroy(change) do

@@ -29,7 +29,7 @@ defmodule Core.Org.Agent do
         %{tenant_id: t_id, perms: %{create_agent: 1}, type: "agent"} = session
       ) do
 
-    with {:ok, binary_id} <- UUID.bin_gen(),
+    with {:ok, binary_id} <- UUID.string_gen(),
          {:ok, change} <- User.changeset(%User{id: binary_id, tenant_id: t_id, type: "agent"}, attrs, session),
          {:ok, user} <- Repo.put(change) do
       {:ok, user}

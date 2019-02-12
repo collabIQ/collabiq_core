@@ -19,7 +19,7 @@ defmodule Core.Org.ContactGroup do
   def create_contact_group(%{workspace_id: w_id} = attrs, %{t_id: t_id, perms: %{c_cg: 1}, type: "agent"} = sess) do
     attrs = Map.put(attrs, :tenant_id, t_id)
 
-    with {:ok, binary_id} <- UUID.bin_gen(),
+    with {:ok, binary_id} <- UUID.string_gen(),
          {:ok, change} <- Group.changeset(%Group{id: binary_id, type: "contact"}, attrs, sess),
          {:ok, _workspace} <- Workspace.get_workspace(w_id, sess),
          {:ok, group} <- Repo.put(change) do

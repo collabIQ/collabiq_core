@@ -20,7 +20,7 @@ defmodule Core.Org.AgentGroup do
         %{t_id: t_id, perms: %{c_ag: 1}, type: "agent"} = session
       ) do
 
-    with {:ok, binary_id} <- UUID.bin_gen(),
+    with {:ok, binary_id} <- UUID.string_gen(),
          {:ok, change} <- Group.changeset(%Group{id: binary_id, tenant_id: t_id, type: "agent"}, attrs, session),
          {:ok, _workspace} <- Workspace.get_workspace(w_id, session),
          {:ok, group} <- Repo.put(change) do

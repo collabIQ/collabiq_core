@@ -3,6 +3,8 @@ defmodule Core.Repo do
     otp_app: :core,
     adapter: Ecto.Adapters.Postgres
 
+  alias Core.Kb.Article
+  alias Core.Org.{Group, Role, Session, Tenant, User, Workspace}
   alias Core.{Error, Repo, UUID}
 
   def init(_, opts) do
@@ -69,5 +71,30 @@ defmodule Core.Repo do
       {:error, change} ->
         {:error, Error.message(change)}
     end
+  end
+
+  def validate_read(%Tenant{} = data, _type), do: {:ok, data}
+  def validate_read(%Article{} = data, _type), do: {:ok, data}
+  def validate_read([%Article{} | _] = data, _type), do: {:ok, data}
+  def validate_read(%Group{} = data, _type), do: {:ok, data}
+  def validate_read([%Group{} | _] = data, _type), do: {:ok, data}
+  def validate_read(%Role{} = data, _type), do: {:ok, data}
+  def validate_read([%Role{} | _] = data, _type), do: {:ok, data}
+  def validate_read(%Session{} = data, _type), do: {:ok, data}
+  def validate_read(%User{} = data, _type), do: {:ok, data}
+  def validate_read([%User{} | _] = data, _type), do: {:ok, data}
+  def validate_read(%Workspace{} = data, _type), do: {:ok, data}
+  def validate_read([%Workspace{} | _] = data, _type), do: {:ok, data}
+  def validate_read(_, :login) do
+    {:error, Error.message({:login, :invalid})}
+  end
+  def validate_read([], type) do
+    {:error, Error.message({type, :not_found})}
+  end
+  def validate_read(struct, type) when is_nil(struct) do
+    {:error, Error.message({type, :not_found})}
+  end
+  def validate_read(_, _) do
+    {:error, Error.message({})}
   end
 end

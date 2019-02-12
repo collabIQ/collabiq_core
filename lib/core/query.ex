@@ -2,7 +2,7 @@ defmodule Core.Query do
   @moduledoc false
   import Ecto.Query, warn: false
   alias Core.Org.Session
-  alias Core.{Error, Repo, Validate}
+  alias Core.{Error, Repo}
 
   @spec edit(Ecto.Query.t(), map(), Session.t(), atom()) :: {:ok, any()} | {:error, [any()]}
   def edit(query, %{id: id} = args, %{t_id: t_id, perms: _p, ws: _w} = sess, schema) do
@@ -13,7 +13,7 @@ defmodule Core.Query do
     |> permissions(sess, schema)
     |> filter(args, schema)
     |> Repo.one()
-    |> Validate.ecto_read(schema)
+    |> Repo.validate_read(schema)
   end
 
   def edit(_query, _id, _sess, _schema), do: {:error, Error.message({:user, :auth})}
@@ -27,7 +27,7 @@ defmodule Core.Query do
     |> permissions(sess, schema)
     |> filter(args, schema)
     |> Repo.single()
-    |> Validate.ecto_read(schema)
+    |> Repo.validate_read(schema)
   end
 
   def get(_query, _id, _sess, _schema), do: {:error, Error.message({:user, :auth})}
@@ -43,7 +43,7 @@ defmodule Core.Query do
     |> filter(args, schema)
     |> sort(args, schema)
     |> Repo.full()
-    |> Validate.ecto_read(schema)
+    |> Repo.validate_read(schema)
   end
 
   def list(_query, _args, _sess, _schema), do: {:error, Error.message({:user, :auth})}
@@ -54,7 +54,7 @@ defmodule Core.Query do
   def admin(query, args, %{ws: ws}, schema) do
     id =
       case schema do
-        _ when schema in [:user, :users, :workspace, :workspaces] ->
+        _ when schema in [:user, :workspace] ->
           :id
 
         _ ->
@@ -65,7 +65,7 @@ defmodule Core.Query do
       %{admin: true} ->
         query
 
-      _ when schema in [:user, :users] ->
+      _ when schema in [:user] ->
         from(q in query,
           join: w in assoc(q, :workspaces),
           where: field(w, ^id) in ^ws,
@@ -85,7 +85,7 @@ defmodule Core.Query do
   def permissions(query, %{perms: perms, ws: ws}, schema) do
     id =
       case schema do
-        _ when schema in [:user, :users, :workspace, :workspaces] ->
+        _ when schema in [:user, :workspace] ->
           :id
 
         _ ->
@@ -96,7 +96,36 @@ defmodule Core.Query do
       %{u_ws: 1} ->
         query
 
-      _ when schema in [:user, :users] ->
+      _ when schema in [:user] ->
+        from([q, w] in query,
+          where: field(w, ^id) in ^ws
+        )
+
+      _ ->
+        from(q in query,
+          where: field(q, ^id) in ^ws
+        )
+    end
+  end
+
+  def workspace_scope(query, _sess, schema) when schema in [:role, :roles, :tenants] do
+    query
+  end
+  def workspace_scope(query, %{perms: perms, ws: ws}, schema) do
+    id =
+      case schema do
+        _ when schema in [:user, :workspace] ->
+          :id
+
+        _ ->
+          :workspace_id
+      end
+
+    case perms do
+      %{u_ws: 1} ->
+        query
+
+      _ when schema in [:user] ->
         from([q, w] in query,
           where: field(w, ^id) in ^ws
         )
@@ -114,7 +143,7 @@ defmodule Core.Query do
       {:email, email}, query when is_nil(email) or email == "" ->
         query
 
-      {:email, email}, query when schema in [:users] ->
+      {:email, email}, query when schema in [:user] ->
         from(q in query,
           where: ilike(q.email, ^"%#{String.downcase(email)}%")
         )
@@ -135,7 +164,7 @@ defmodule Core.Query do
       {:status, _}, query ->
         query
 
-      {:type, [_ | _] = type}, query when schema in [:groups, :roles, :users] ->
+      {:type, [_ | _] = type}, query when schema in [:group, :role, :user] ->
         from(q in query,
           where: q.type in ^type
         )
@@ -143,7 +172,7 @@ defmodule Core.Query do
       {:type, _}, query ->
         query
 
-      {:workspaces, [_ | _] = work}, query when schema in [:user, :users] ->
+      {:workspaces, [_ | _] = work}, query when schema in [:user] ->
         from([q, j] in query,
           where: j.id in ^work
         )
@@ -162,7 +191,7 @@ defmodule Core.Query do
 
   def sort(query, %{sort: %{field: field, order: order}}, schema) when order in ["asc", "desc"] do
     case field do
-      "created" when schema in [:groups, :workspaces] ->
+      "created" when schema in [:groups, :workspace] ->
         case order do
           "desc" ->
             from(q in query,
@@ -175,7 +204,7 @@ defmodule Core.Query do
             )
         end
 
-      "email" when schema in [:users] ->
+      "email" when schema in [:user] ->
         case order do
           "desc" ->
             from(q in query,
@@ -188,7 +217,7 @@ defmodule Core.Query do
             )
         end
 
-      "name" when schema in [:groups, :workspaces] ->
+      "name" when schema in [:groups, :workspace] ->
         case order do
           "desc" ->
             from(q in query,
@@ -201,7 +230,7 @@ defmodule Core.Query do
             )
         end
 
-      "status" when schema in [:groups, :workspaces] ->
+      "status" when schema in [:groups, :workspace] ->
         case order do
           "desc" ->
             from(q in query,
@@ -231,7 +260,7 @@ defmodule Core.Query do
             )
         end
 
-      "updated" when schema in [:groups, :workspaces] ->
+      "updated" when schema in [:groups, :workspace] ->
         case order do
           "desc" ->
             from(q in query,
@@ -251,13 +280,13 @@ defmodule Core.Query do
     end
   end
 
-  def sort(query, _args, schema) when schema in [:users] do
+  def sort(query, _args, schema) when schema in [:user] do
     from([q, j] in query,
       order_by: fragment("lower(?) ASC", q.name)
     )
   end
 
-  def sort(query, _args, schema) when schema in [:groups, :roles, :workspaces] do
+  def sort(query, _args, schema) when schema in [:group, :role, :workspace] do
     from(q in query,
       order_by: fragment("lower(name) ASC")
     )

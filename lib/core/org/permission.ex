@@ -43,23 +43,23 @@ defmodule Core.Org.Permission do
   end
 
   @required [
-    :c_art,
     :c_ag,
     :c_agent,
+    :c_art,
     :c_cg,
     :c_con,
+    :c_tag,
     :c_ws,
+    :m_role,
     :pub_art,
     :u_ag,
     :u_agent,
+    :u_art,
     :u_cg,
     :u_con,
-    :u_art,
+    :u_tag,
     :u_ten,
-    :m_role,
-    :u_ws,
-    :c_tag,
-    :u_tag
+    :u_ws
   ]
 
   def changeset(%Permission{} = permission, attrs) do
