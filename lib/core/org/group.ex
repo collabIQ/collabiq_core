@@ -55,7 +55,7 @@ defmodule Core.Org.Group do
   ##################
   @attrs_status ["active", "deleted", "disabled"]
   @optional [:description, :email, :phone, :status]
-  @required [:tenant_id, :name, :workspace_id]
+  @required [:name]
 
   @spec changeset(%Group{}, map(), Session.t()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
 

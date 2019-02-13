@@ -11,17 +11,23 @@ defmodule Core.Org.ContactGroup do
   ### API Functions ###
   #####################
 
-  def edit_contact_group(id, %{perms: %{u_cg: 1}} = sess) do
-    from(g in Group, where: g.type == ^"contact")
-    |> Query.edit(id, sess, :group)
+  def edit_contact_group(id, %{perms: %{u_cg: 1}, t_id: t_id} = sess) do
+    args = %{id: id, filter: [type: "agent"]}
+
+    from(g in Group,
+      where: g.tenant_id == ^t_id,
+      where: g.id == ^id
+    )
+    |> Query.workspace_scope(sess, :group)
+    |> Query.filter(args, :group)
+    |> Repo.single()
+    |> Repo.validate_read(:group)
   end
 
-  def create_contact_group(%{workspace_id: w_id} = attrs, %{t_id: t_id, perms: %{c_cg: 1}, type: "agent"} = sess) do
-    attrs = Map.put(attrs, :tenant_id, t_id)
-
+  def create_contact_group(%{workspace_id: ws_id} = attrs, %{t_id: t_id, perms: %{c_cg: 1}, type: "agent"} = sess) do
     with {:ok, binary_id} <- UUID.string_gen(),
-         {:ok, change} <- Group.changeset(%Group{id: binary_id, type: "contact"}, attrs, sess),
-         {:ok, _workspace} <- Workspace.get_workspace(w_id, sess),
+         {:ok, change} <- Group.changeset(%Group{id: binary_id, tenant_id: t_id, type: "contact", workspace_id: ws_id}, attrs, sess),
+         {:ok, _workspace} <- Workspace.edit_workspace(ws_id, sess),
          {:ok, group} <- Repo.put(change) do
       {:ok, group}
     else

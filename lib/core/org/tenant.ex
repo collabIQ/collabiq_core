@@ -14,7 +14,7 @@ defmodule Core.Org.Tenant do
     field(:type, :string, default: "trial")
     field(:deleted_at, :utc_datetime)
 
-    timestamps(inserted_at: :created_at, type: :utc_datetime, usec: false)
+    timestamps(inserted_at: :created_at, type: :utc_datetime)
   end
 
   #####################
@@ -43,40 +43,24 @@ defmodule Core.Org.Tenant do
   end
 
   @spec update_tenant(map(), Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def update_tenant(attrs, %{perms: %{u_ten: 1}, type: "agent"} = session) do
-    with {:ok, tenant} <- get_tenant(session),
-         {:ok, change} <- changeset(tenant, attrs),
-         {:ok, tenant} <- Repo.put(change) do
-      {:ok, tenant}
-    else
-      error ->
-        error
-    end
+  def update_tenant(attrs, sess) do
+    modify_tenant(attrs, sess)
   end
-
-  def update_tenant(_attrs, _session), do: Error.message({:user, :auth})
 
   @spec delete_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def delete_tenant(%{perms: %{u_ten: 1}, type: "agent"} = session) do
-    attrs = %{status: "deleted", deleted_at: Timex.now()}
-
-    with {:ok, tenant} <- get_tenant(session),
-         {:ok, change} <- changeset(tenant, attrs),
-         {:ok, tenant} <- Repo.put(change) do
-      {:ok, tenant}
-    else
-      error ->
-        error
-    end
+  def delete_tenant(sess) do
+    %{status: "deleted", deleted_at: Timex.now()}
+    |> modify_tenant(sess)
   end
-
-  def delete_tenant(_session), do: Error.message({:user, :auth})
 
   @spec enable_tenant(Session.t()) :: {:ok, %Tenant{}} | {:error, [any()]}
-  def enable_tenant(%{perms: %{u_ten: 1}, type: "agent"} = session) do
-    attrs = %{status: "active", deleted_at: nil}
+  def enable_tenant(sess) do
+    %{status: "active", deleted_at: nil}
+    |> modify_tenant(sess)
+  end
 
-    with {:ok, tenant} <- get_tenant(session),
+  def modify_tenant(attrs, %{perms: %{u_ten: 1}, type: "agent"} = sess) do
+    with {:ok, tenant} <- get_tenant(sess),
          {:ok, change} <- changeset(tenant, attrs),
          {:ok, tenant} <- Repo.put(change) do
       {:ok, tenant}
@@ -86,7 +70,7 @@ defmodule Core.Org.Tenant do
     end
   end
 
-  def enable_tenant(_session), do: Error.message({:user, :auth})
+  def modify_tenant(_sess), do: {:error, Error.message({:user, :auth})}
 
   ##################
   ### Changesets ###

@@ -13,21 +13,21 @@ defmodule Core.Org do
 
   defdelegate delete_tenant(session), to: Tenant
   defdelegate delete_agent(id, session), to: Agent
-  defdelegate delete_agent_group(id, session), to: AgentGroup
+  defdelegate delete_agent_group(attrs, session), to: AgentGroup
   defdelegate delete_contact(id, session), to: Contact
   defdelegate delete_contact_group(id, session), to: ContactGroup
   defdelegate delete_role(id, session), to: Role
   defdelegate delete_workspace(attrs, session), to: Workspace
 
   defdelegate disable_agent(id, session), to: Agent
-  defdelegate disable_agent_group(id, session), to: AgentGroup
+  defdelegate disable_agent_group(attrs, session), to: AgentGroup
   defdelegate disable_contact(id, session), to: Contact
   defdelegate disable_contact_group(id, session), to: ContactGroup
   defdelegate disable_workspace(attrs, session), to: Workspace
 
   defdelegate enable_tenant(session), to: Tenant
   defdelegate enable_agent(id, session), to: Agent
-  defdelegate enable_agent_group(id, session), to: AgentGroup
+  defdelegate enable_agent_group(attrs, session), to: AgentGroup
   defdelegate enable_contact(id, session), to: Contact
   defdelegate enable_contact_group(id, session), to: ContactGroup
   defdelegate enable_workspace(attrs, session), to: Workspace

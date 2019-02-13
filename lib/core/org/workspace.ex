@@ -41,31 +41,31 @@ defmodule Core.Org.Workspace do
   end
 
   @spec get_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
-  def get_workspace(args, %{t_id: t_id} = sess) do
+  def get_workspace(%{id: id}, %{t_id: t_id} = sess) do
     from(w in Workspace,
-      where: w.tenant_id == ^t_id
+      where: w.tenant_id == ^t_id,
+      where: w.id == ^id
     )
     |> Query.workspace_scope(sess, :workspace)
-    |> Query.filter(args, :workspace)
     |> Repo.single()
     |> Repo.validate_read(:workspace)
   end
 
   @spec edit_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
-  def edit_workspace(args, %{t_id: t_id} = sess) do
+  def edit_workspace(id, %{perms: %{u_ws: v}, t_id: t_id} = sess) when v in [1, 2] do
     from(w in Workspace,
-      where: w.tenant_id == ^t_id
+      where: w.tenant_id == ^t_id,
+      where: w.id == ^id
     )
     |> Query.workspace_scope(sess, :workspace)
-    |> Query.filter(args, :workspace)
     |> Repo.one()
     |> Repo.validate_read(:workspace)
   end
 
   @spec create_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
   def create_workspace(attrs, %{t_id: t_id, perms: %{c_ws: 1}, type: "agent"}) do
-    with {:ok, binary_id} <- UUID.string_gen(),
-         {:ok, change} <- changeset(%Workspace{id: binary_id, tenant_id: t_id}, attrs),
+    with {:ok, id} <- UUID.string_gen(),
+         {:ok, change} <- changeset(%Workspace{id: id, tenant_id: t_id}, attrs),
          {:ok, workspace} <- Repo.put(change) do
       {:ok, workspace}
     else
@@ -78,8 +78,7 @@ defmodule Core.Org.Workspace do
 
   @spec update_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
   def update_workspace(attrs, sess) do
-    attrs
-    |> modify_workspace(sess)
+    modify_workspace(attrs, sess)
   end
 
   @spec delete_workspace(map(), Session.t()) :: {:ok, %Workspace{}} | {:error, [any(), ...]}
@@ -125,10 +124,10 @@ defmodule Core.Org.Workspace do
   @spec changeset(%Workspace{}, map()) :: {:ok, Ecto.Changeset.t()} | {:error, [any(), ...]}
   def changeset(%Workspace{} = workspace, attrs) do
     workspace
-    |> Repo.preload([:users_workspaces])
     |> cast(attrs, @optional ++ @required)
     |> validate_required(@required)
     |> validate_inclusion(:status, @attrs_status)
+    |> foreign_key_constraint(:tenant_id)
     |> Color.changeset()
     |> Validate.change()
   end

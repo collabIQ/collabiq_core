@@ -17,11 +17,18 @@ defmodule Core.Org.Agent do
     |> Query.edit(args, session, :user)
   end
 
-  def get_agent_by_workspace(id, workspace_id, session) do
+  def edit_agent_by_workspace(id, workspace_id, %{t_id: t_id} = sess) do
     args = %{id: id, filter: [type: "agent", workspaces: [workspace_id]]}
 
-    from(u in User, distinct: u.id, join: w in assoc(u, :workspaces))
-    |> Query.get(args, session, :user)
+    from(u in User,
+      distinct: u.id,
+      join: w in assoc(u, :workspaces),
+      where: u.tenant_id == ^t_id
+    )
+    |> Query.workspace_scope(sess, :user)
+    |> Query.filter(args, :user)
+    |> Repo.one()
+    |> Repo.validate_read(:user)
   end
 
   def create_agent(
